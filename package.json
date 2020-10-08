@@ -1,0 +1,19 @@
+{
+  "name": "spotifylooper",
+  "version": "0.0.1",
+  "description": "A simple non premium spotify looper",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "browser-polyfill": "^3.20.2",
+    "browserify": "^16.5.2",
+    "mustache": "^4.0.1"
+  },
+  "devDependencies": {
+    "web-ext": "^5.2.0"
+  }
+}

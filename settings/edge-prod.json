@@ -1,0 +1,6 @@
+{
+  "buildType": "dev",
+
+  "browserIsChrome": true,
+  "appType": "chrome-extension"
+}
