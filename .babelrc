@@ -1,0 +1,10 @@
+{
+  "presets": [
+    ["env", {
+      "targets": {
+        "firefox": "68",
+        "chrome": "64"
+      }
+    }]
+  ]
+}

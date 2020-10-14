@@ -13,6 +13,7 @@ clean:
 extension: build
 extension: build/background.bundle.js
 extension: build/contentscript.bundle.js
+extension: css
 extension: images
 extension: build/manifest.json
 
@@ -27,17 +28,27 @@ build/manifest.json: src/manifest.json.mustache
 
 #TODO: browserify, babelify properly
 build/contentscript.bundle.js:
-	cp src/background/index.js $@
+	$(BROWSERIFY) -t babelify -d src/contentscript/index.js > $@
 
 #TODO: browserify, babelify properly
 build/background.bundle.js:
-	cp src/contentscript/index.js $@
+	$(BROWSERIFY) -t babelify -d src/background/index.js > $@
+
+.PHONY: css
+css:
+	@mkdir build/css
+	cp -r node_modules/winjs/css build
+	cp -r node_modules/jqueryui/jquery*css build/css
 
 .PHONY: images
 images:
 	cp -r images build
+	mkdir build/css/images
+	cp node_modules/jqueryui/images/* build/css/images/.
 
 #FIXME: doesnt work
 .PHONY: test
 test: extension
 	cd build || ../node_modules/.bin/web-ext run
+
+

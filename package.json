@@ -9,11 +9,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "babelify": "^10.0.0",
     "browser-polyfill": "^3.20.2",
     "browserify": "^16.5.2",
-    "mustache": "^4.0.1"
+    "jquery": "^3.5.1",
+    "jqueryui": "^1.11.1",
+    "mustache": "^4.0.1",
+    "querystring": "^0.2.0",
+    "winjs": "^4.4.3"
   },
   "devDependencies": {
-    "web-ext": "^5.2.0"
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015": "^6.24.1",
+    "web-ext": "^5.2.0",
+    "webextension-polyfill": "^0.6.0"
   }
 }
