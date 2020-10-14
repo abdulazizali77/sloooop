@@ -10,6 +10,8 @@ import playerSeek from '../shared/spotifyPlayer';
 
 console.log("start content.js");
 const SPOTIFY_PLAYER_EP = 'https://api.spotify.com/v1/me/player';
+//TODO: should have a state machine
+var enabled;
 var containerDiv;
 var dialogDiv;
 var bearertoken;
@@ -246,6 +248,10 @@ function setupObservers() {
     observePlaybackPosition();
     observeTracks();
 }
+function teardownObservers() {
+    playbackPositionObserver.disconnect();
+    trackChangeObserver.disconnect();
+}
 
 function handleDurationChange(event) {
     console.log("POOP SLIDER INIT START handleDurationChange " + event.detail.duration + "" + event.detail.min + " " + event.detail.max);
@@ -296,7 +302,7 @@ function handleRangeChange(event) {
     //FIXME:bit of a kludge here
     if (currentTrackId != undefined) {
         saveTrack(currentTrackId, rangeMin, rangeMax);
-        //checkPlayingPosition();
+
     }
 }
 
@@ -307,7 +313,10 @@ function checkPlayingPosition() {
     if (!(rangeMin == 0 && (rangeMax == currentTrackIdDuration || rangeMax == 1))) {
         //NB: if the max is not set but the min is, the playback cant seek back if it reaches the end
         //so we have to offset against 1second, however this is a bit iffy and buggy
-        let offset = 2;
+        let offset = 0;
+        if(rangeMax == currentTrackIdDuration){
+            offset = 1;
+        }
         if (currentPlayingPosition < rangeMin || currentPlayingPosition >= (rangeMax - offset)) {
             console.log("currentPlayingPosition is outside!" + currentPlayingPosition + " " + rangeMin + " " + rangeMax + " " + (rangeMax - offset));
             //TODO: a flag to disable jumping to min if less than minimum
@@ -529,11 +538,16 @@ function onMessageHandler(msg, sender, sendResponse) {
             //getPlaybackController();
             spotifyInitTrack(bearertoken);
             //if 204
+            enabled = true;
             sendResponse(true);
         });
     }
     if (msg.text === 'disable_extension') {
-        teardownOverlay(sendResponse);
+        if(enabled == true){
+            teardownOverlay(sendResponse);
+            teardownObservers();
+            enabled = false;
+        }
     }
 
     //called by authflow
