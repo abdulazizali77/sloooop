@@ -185,6 +185,7 @@ function handleAuthFlow(uri, tab) {
                 //doesnt work, probably need to send message
                 //let codeStr = "setBearer('"+obj1.access_token+"');";
 
+                //FIXME: should set expectingBearer = true again if we didnt get the correct callback
                 chrome.tabs.sendMessage(lastTabId,
                     {
                         "text": 'set_bearer',

@@ -230,16 +230,26 @@ function positionMutationCallback(mutationList, observer) {
 function observePlaybackPosition() {
     //current time
     let pbpos = document.getElementsByClassName("playback-bar__progress-time")[0];
-    playbackPositionObserver = new MutationObserver(positionMutationCallback);
-    playbackPositionObserver.observe(pbpos, moinit);
+    if (pbpos != undefined) {
+        playbackPositionObserver = new MutationObserver(positionMutationCallback);
+        playbackPositionObserver.observe(pbpos, moinit);
+    } else {
+        console.log("ASSERT nowt undefined ");
+        setTimeout(observePlaybackPosition, 1000);
+    }
 }
 
 function observeTracks() {
     //a[data-testid="nowplaying-track-link"]
     //FIXME: unsure what the second one is
     let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
-    trackChangeObserver = new MutationObserver(trackMutationCallback);
-    trackChangeObserver.observe(nowt1, moinit);
+    if (nowt1 != undefined) {
+        trackChangeObserver = new MutationObserver(trackMutationCallback);
+        trackChangeObserver.observe(nowt1, moinit);
+    } else {
+        console.log("ASSERT nowt undefined ");
+        setTimeout(observeTracks, 1000);
+    }
 }
 
 function setupObservers() {
@@ -248,8 +258,12 @@ function setupObservers() {
 }
 
 function teardownObservers() {
-    playbackPositionObserver.disconnect();
-    trackChangeObserver.disconnect();
+    if (playbackPositionObserver != undefined) {
+        playbackPositionObserver.disconnect();
+    }
+    if (trackChangeObserver != undefined) {
+        trackChangeObserver.disconnect();
+    }
 }
 
 function handleDurationChange(event) {
