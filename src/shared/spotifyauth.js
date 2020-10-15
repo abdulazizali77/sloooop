@@ -1,18 +1,19 @@
-fetch("https://api.spotify.com/v1/views/desktop-home?timestamp=2020-10-14T06%3A18%3A35.350Z&platform=web&content_limit=10&limit=20&types=album%2Cplaylist%2Cartist%2Cshow%2Cstation&image_style=gradient_overlay&country=MY&market=from_token&locale=en", {
-    "headers": {
-        "accept": "application/json",
-        "accept-language": "en",
-        "app-platform": "WebPlayer",
-        "authorization": "Bearer BQDfVZEi30RvLa-UqHvYStHo47cVMQYHECXQaIHgbjMrHJk7tDR5YV1fTVRGj3ff6IRSAIJJVfWG6wiF5A7k57tqTKTc12Z0qg9ZdD7liVKSbNM9HYwfL1J0wDDiNhiKcijeN_L0NdmxN4rmKs99cLaXLTFrJiFliPd69frPopmi9c86nYc0sTjUudq-oY_PsbACnvHALFzAKbkEM5jb4ln-Kd4k04kpTqTap406KbfYF2iPD-9r4QCSAq3SioZK65hR2tXHnYVSsumd6nY8gBUYSPabqLpL3D0nOz95La7bSPZtLg",
-        "spotify-app-version": "1.1.45.161.gf70d8688"
-    },
-    "referrer": "https://open.spotify.com/",
-    "referrerPolicy": "strict-origin-when-cross-origin",
-    "body": null,
-    "method": "GET",
-    "mode": "cors",
-    "credentials": "include"
-});
+// fetch("https://api.spotify.com/v1/views/desktop-home?timestamp=2020-10-14T06%3A18%3A35.350Z&platform=web&content_limit=10&limit=20&types=album%2Cplaylist%2Cartist%2Cshow%2Cstation&image_style=gradient_overlay&country=MY&market=from_token&locale=en", {
+//     "headers": {
+//         "accept": "application/json",
+//         "accept-language": "en",
+//         "app-platform": "WebPlayer",
+//         //bearer is temporary
+//         "authorization": "Bearer ",
+//         "spotify-app-version": "1.1.45.161.gf70d8688"
+//     },
+//     "referrer": "https://open.spotify.com/",
+//     "referrerPolicy": "strict-origin-when-cross-origin",
+//     "body": null,
+//     "method": "GET",
+//     "mode": "cors",
+//     "credentials": "include"
+// });
 
 let desktophome = {
     "content" : {
@@ -6866,14 +6867,7 @@ let desktophome = {
 import querystring from 'querystring';
 
 export default function getLoginUrl() {
-    //https://accounts.spotify.com/authorize?client_id=c22c3823ad264e30807be01b388babf3&redirect_uri=https%3A%2F%2Fwww.example.com%2Fcallback&scope=user-read-private%20user-read-email&response_type=token&state=123
-    //https://accounts.spotify.com/authorize?client_id=774b29d4f13844c495f206cafdad9c86&redirect_uri=https%3A%2F%2Fdeveloper.spotify.com%2Fcallback&scope=user-read-private%20user-read-email&response_type=token&state=123
-
     const SPOTIFY_AUTH_URI = 'https://accounts.spotify.com/authorize?';
-    // let client_id = 'c22c3823ad264e30807be01b388babf3';
-    // let response_type = 'code';
-    // let redirect_uri = 'https://www.example.com/callback';
-
     let state = generateRandomString(16);
     let scope = 'user-read-private user-read-email user-read-playback-position user-read-playback-state user-modify-playback-state';
 
@@ -6885,45 +6879,6 @@ export default function getLoginUrl() {
         state: state,
         show_dialog: true
     };
-    let implicitGrantopt1b = {
-        response_type: 'token',
-        client_id: 'c22c3823ad264e30807be01b388babf3',
-        scope: scope,
-        redirect_uri: 'https://www.example.com/callback',
-        state: state,
-        show_dialog: true
-    };
-    //expectedly fails
-    // This site can’t be reachedThe webpage at https://accounts.spotify.com/authorize/accept might be temporarily down or it may have moved permanently to a new web address.
-    //     ERR_UNSAFE_REDIRECT
-    let implicitGrantopt2TestApp2 = {
-        response_type: 'token',
-        client_id: '7ce74e3dee024da5916e55c0dd054444',
-        scope: scope,
-        redirect_uri: 'about:blank',
-        state: state,
-        show_dialog: true
-    };
-    let implicitGrantopt3TestApp3 = {
-        response_type: 'token',
-        client_id: '41a1b6257c5c42bca9234777eefc8961',
-        scope: scope,
-        redirect_uri: 'https://developer.spotify.com/callback',
-        state: state,
-        show_dialog: true
-    };
-    //default from spotify
-    let implicitGrantopt4 = {
-        response_type: 'token',
-        client_id: '774b29d4f13844c495f206cafdad9c86',
-        scope: scope,
-        redirect_uri: 'https://developer.spotify.com/callback',
-        state: state,
-        show_dialog: true
-    };
-    //"https://accounts.spotify.com/authorize?client_id=c22c3823ad264e30807be01b388babf3&response_type=code&redirect_uri=https%3A%2F%2Fwww.example.com%2Fcallback&scope=user-read-private%20user-read-email&state=34fFs29kd09"
-    //https://accounts.spotify.com/authorize?response_type=token&redirect_uri=https%3A%2F%2Fdeveloper.spotify.com%2Fcallback&client_id=774b29d4f13844c495f206cafdad9c86&scope=user-read-playback-position+user-read-playback-state&state=32tckj
-
 
     let uri = SPOTIFY_AUTH_URI + querystring.stringify(implicitGrantopt1);
     return uri;
