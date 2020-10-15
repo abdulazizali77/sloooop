@@ -25,8 +25,8 @@ var trackChangeObserver;
 var playbackPositionObserver;
 var logoutBtnObserver;
 var theLogoutBtn;
-var thisTabId;
 
+var prevClick;
 function injectCssToHead(cssFile) {
     injectLinkToHead(cssFile, "text/css").rel = "stylesheet";
 }
@@ -237,7 +237,10 @@ function positionMutationCallback(mutationList, observer) {
 function logoutBtnHandler(e) {
     console.log("DEBUG logoutBtnHandler " + e.target + " " + e.target.innerText);
     //send message to bg
-    chrome.runtime.sendMessage({type: "user_logout", tab:thisTabId});
+    chrome.runtime.sendMessage({type: "user_logout"}, function(response){
+        console.log("DEBUG prevClick="+prevClick);
+        prevClick.apply();
+    });
 }
 
 function logoutClickedCallback(mutationList, observer) {
@@ -253,10 +256,11 @@ function logoutClickedCallback(mutationList, observer) {
 
                     for (let logoutBtn of logoutBtns) {
                         if (logoutBtn.innerText == 'Log out') {
-                            let prevClick = logoutBtn.click;
+                            prevClick = logoutBtn.click;
                             console.log("DEBUG " + logoutBtn + " logoutBtn.innerText=" + logoutBtn.innerText + " " + prevClick);
 
-                            logoutBtn.addEventListener("click", logoutBtnHandler);
+                            //logoutBtn.addEventListener("click", logoutBtnHandler);
+                            logoutBtn.onclick = logoutBtnHandler;
                             theLogoutBtn = logoutBtn;
                             console.log("DEBUG logoutBtn" + logoutBtn + " " + logoutBtn.click + " " + prevClick);
 
@@ -624,7 +628,6 @@ function onMessageHandler(msg, sender, sendResponse) {
         //2. check if playing
         //3. call api if playing
         // "is_playing": false
-        thisTabId = msg.tabId;
         checkUserAccount(bearertoken).then((result) => {
             result.json().then(resp => {
                 if (resp.product == 'premium') {

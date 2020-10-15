@@ -114,8 +114,8 @@ function pageActionClick(thistab) {
                         //FIXME: callback hell
                         chrome.tabs.sendMessage(lastTabId,
                             {
-                                "text": 'enable_extension',
-                                "tabId": lastTabId
+                                "text": 'enable_extension'
+
                             },
                             (result2) => {
                                 console.log("finished enabling message " + result2);
@@ -200,6 +200,7 @@ function handleAuthFlow(uri, tab) {
                             chrome.tabs.sendMessage(lastTabId,
                                 {
                                     "text": 'enable_extension'
+
                                 },
                                 (result2) => {
                                     console.log("finished enabling message " + result2);
@@ -294,8 +295,17 @@ function backgroundMessageHandler(request, sender, sendResponse) {
         "from a content script:" + sender.tab.url :
         "from the extension");
     if (request.type == "user_logout") {
-        console.log("DEBUG "+request.type +" "+request.tab);
-        enabledMap[request.tab] = false;
+        console.log("DEBUG "+request.type +" "+request.tab+" "+sender.tab.id);
+        chrome.tabs.sendMessage(sender.tab.id,
+            {
+                "text": 'disable_extension'
+            },
+            (result2) => {
+                console.log("finished disabling message " + result2);
+            });
+        enabledMap[sender.tab.id] = false;
+        bearerToken = undefined;
+        sendResponse();
     }
 }
 
