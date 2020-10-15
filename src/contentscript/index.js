@@ -1,11 +1,7 @@
 import './jquery-global';
 import 'jqueryui';
-
-import * as webextensionpolyfill from 'webextension-polyfill';
-import * as winjs from 'winjs';
 import querystring from "querystring";
 import playerSeek from '../shared/spotifyPlayer';
-//import getLoginUrl from "../shared/spotifyauth";
 import checkUserAccount from "../shared/spotifyMe";
 
 
@@ -23,6 +19,7 @@ var currentPlayingPosition;
 var currentTrackIdDuration;
 var playbackController;
 var isNotPremium;
+
 function injectCssToHead(cssFile) {
     injectLinkToHead(cssFile, "text/css").rel = "stylesheet";
 }
@@ -75,7 +72,7 @@ function rangeSliderStartHandler(event, ui) {
 
 function rangeSliderChangeHandler(event, ui) {
 
-    console.log("POOP USER CHANGED SLIDERS" + ui.values[0] + " " + ui.values[1] + " ");
+    console.log("DEBUG  USER CHANGED SLIDERS" + ui.values[0] + " " + ui.values[1] + " ");
 
     let rangeEvt = new CustomEvent("sloop_range_change", {
         detail: {
@@ -249,13 +246,14 @@ function setupObservers() {
     observePlaybackPosition();
     observeTracks();
 }
+
 function teardownObservers() {
     playbackPositionObserver.disconnect();
     trackChangeObserver.disconnect();
 }
 
 function handleDurationChange(event) {
-    console.log("POOP SLIDER INIT START handleDurationChange " + event.detail.duration + "" + event.detail.min + " " + event.detail.max);
+    console.log("DEBUG  SLIDER INIT START handleDurationChange " + event.detail.duration + "" + event.detail.min + " " + event.detail.max);
     //FIXME: bit of a kludge here, the sequence of events arent really streamlined
     //so we have to invalidate the currentTrack
     //    currentTrackId = undefined;
@@ -282,7 +280,7 @@ function handleDurationChange(event) {
     }
     $("#" + dialogDiv.id).slider(options);
 
-    console.log("POOP SLIDER INIT END");
+    console.log("DEBUG  SLIDER INIT END");
     adjustContainer();
 }
 
@@ -296,7 +294,7 @@ function handlePositionChange(event) {
 }
 
 function handleRangeChange(event) {
-    console.log("POOP handleRangeChange " + event.detail.min + " " + event.detail.max);
+    console.log("DEBUG  handleRangeChange " + event.detail.min + " " + event.detail.max);
     rangeMin = event.detail.min;
     rangeMax = event.detail.max;
 
@@ -315,7 +313,7 @@ function checkPlayingPosition() {
         //NB: if the max is not set but the min is, the playback cant seek back if it reaches the end
         //so we have to offset against 1second, however this is a bit iffy and buggy
         let offset = 0;
-        if(rangeMax == currentTrackIdDuration){
+        if (rangeMax == currentTrackIdDuration) {
             offset = 1;
         }
         if (currentPlayingPosition < rangeMin || currentPlayingPosition >= (rangeMax - offset)) {
@@ -355,7 +353,7 @@ function spotifyInitTrack(token) {
                     let trackduration = resp.item.duration_ms;
                     let trackduration_s = Math.ceil(Number.parseInt(resp.item.duration_ms) / 1000);
                     let trackprogress = resp.progress_ms;
-                    console.log("POOP API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
+                    console.log("DEBUG  API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
 
                     currentTrackId = trackid;
                     currentTrackIdDuration = trackduration_s;
@@ -411,7 +409,7 @@ function saveTrack(trackId, min, max) {
         min: min,
         max: max
     };
-    console.log("POOP SAVE TRACK! " + trackId + " " + min + " " + max);
+    console.log("DEBUG  SAVE TRACK! " + trackId + " " + min + " " + max);
     let item = {};
     item[trackId] = trackValues;
     chrome.storage.local.set(item, function () {
@@ -424,7 +422,7 @@ function getTrack(trackId) {
     return new Promise((resolve, reject) => {
         chrome.storage.local.get(trackId, function (trackValues) {
             if (chrome.runtime.lastError == undefined) {
-                console.log("POOP GOT VALUES " + trackId + " trackValues[trackId]=" + trackValues[trackId]);
+                console.log("DEBUG  GOT VALUES " + trackId + " trackValues[trackId]=" + trackValues[trackId]);
                 resolve(trackValues[trackId]);
             } else {
                 reject();
@@ -464,7 +462,7 @@ function getPlaybackController() {
 function seek(ms) {
     console.log("seeking to " + ms + " bearertoken=" + bearertoken);
     if (isNotPremium == false &&
-        (bearertoken != undefined && bearertoken != '') ){
+        (bearertoken != undefined && bearertoken != '')) {
         if (ms != undefined) {
             playerSeek(bearertoken, ms).then((result) => {
                 console.log(result);
@@ -474,7 +472,7 @@ function seek(ms) {
         } else {
             console.log("ASSERT seek ms=" + ms);
         }
-    }else{
+    } else {
         console.log("User is not premium");
     }
 }
@@ -541,9 +539,9 @@ function onMessageHandler(msg, sender, sendResponse) {
         //3. call api if playing
         // "is_playing": false
 
-        checkUserAccount(bearertoken).then((result)=>{
+        checkUserAccount(bearertoken).then((result) => {
             result.json().then(resp => {
-                if(resp.product=='premium'){
+                if (resp.product == 'premium') {
                     setupOverlay().then(() => {
 
                         adjustContainer();
@@ -558,18 +556,18 @@ function onMessageHandler(msg, sender, sendResponse) {
                         isNotPremium = false;
                         sendResponse(true);
                     });
-                }else{
+                } else {
                     isNotPremium = true;
                     alert("Not Premium");
                 }
             });
-        }).catch((e)=>{
+        }).catch((e) => {
 
         });
 
     }
     if (msg.text === 'disable_extension') {
-        if(enabled == true){
+        if (enabled == true) {
             teardownOverlay(sendResponse);
             teardownObservers();
             enabled = false;
@@ -578,7 +576,7 @@ function onMessageHandler(msg, sender, sendResponse) {
 
     //called by authflow
     if (msg.text === 'set_bearer') {
-        console.log("POOP msg.payload.bearer " + msg.payload.bearer);
+        console.log("DEBUG  msg.payload.bearer " + msg.payload.bearer);
 
         bearertoken = msg.payload.bearer;
         sendResponse(true);

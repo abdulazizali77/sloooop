@@ -3,17 +3,15 @@
 
 //import $ from 'jquery';
 //import * as jqueryui from 'jqueryui';
-import * as webextensionpolyfill from 'webextension-polyfill';
-import getLoginUrl from "../shared/spotifyauth";
+import getLoginUrl from "../shared/spotifyAuth";
 //import browserpolyfill from 'browser-polyfill';
 import querystring from 'querystring';
 
-console.log("start bg.js");
+//console.log("start bg.js");
 const CALLBACK_URL = 'https://www.example.com';
-const CALLBACK_URLb = 'https://www.example.com/callback';
-const CALLBACK_URL2 = 'https://developer.spotify.com/callback';
+
 export default function init() {
-    alert("bg init");
+    //alert("bg init");
 }
 var enabledMap = {};
 var lastTabId = -1;
@@ -52,7 +50,7 @@ function tokenTimeLeft() {
 }
 
 function installExtension() {
-    alert(chrome.runtime.id);
+    //alert(chrome.runtime.id);
     chrome.runtime.getPlatformInfo((platformInfo) => {
         //alert(platformInfo);
     });
@@ -66,7 +64,7 @@ function installExtension() {
                     // That fires when a page's URL contains a 'g' ...
                     conditions: [
                         new chrome.declarativeContent.PageStateMatcher({
-                            pageUrl: { hostEquals: 'open.spotify.com', schemes: ['https']},
+                            pageUrl: {hostEquals: 'open.spotify.com', schemes: ['https']},
                             css: ["div[class='playback-bar']"]
                         })
                     ],
@@ -112,7 +110,7 @@ function pageActionClick(thistab) {
                 (result2) => {
                     console.log("finished set bearer" + result2);
                     chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
-                        console.log("POOP focused lastTabId=" + lastTabId);
+                        console.log("DEBUG  focused lastTabId=" + lastTabId);
                         //FIXME: callback hell
                         chrome.tabs.sendMessage(lastTabId,
                             {
@@ -182,7 +180,7 @@ function handleAuthFlow(uri, tab) {
         bearerFetchTimeStampExpire = bearerFetchTimeStamp + (Number.parseFloat(obj1.expires_in) * 1000);
 
         chrome.tabs.remove(tab.id, () => {
-            console.log("POOP callback closed tab.id=" + tab.id + " lastTabId=" + lastTabId);
+            console.log("DEBUG  callback closed tab.id=" + tab.id + " lastTabId=" + lastTabId);
             if (lastTabId != undefined && lastTabId != -1) {
                 //doesnt work, probably need to send message
                 //let codeStr = "setBearer('"+obj1.access_token+"');";
@@ -195,7 +193,7 @@ function handleAuthFlow(uri, tab) {
                     (result2) => {
                         console.log("finished set bearer" + result2);
                         chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
-                            console.log("POOP focused lastTabId=" + lastTabId);
+                            console.log("DEBUG  focused lastTabId=" + lastTabId);
                             //FIXME: callback hell
                             chrome.tabs.sendMessage(lastTabId,
                                 {
@@ -214,7 +212,7 @@ function handleAuthFlow(uri, tab) {
                 //         "result="+result
                 //     );
                 //     chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
-                //         console.log("POOP focused lastTabId=" + lastTabId);
+                //         console.log("DEBUG  focused lastTabId=" + lastTabId);
                 //     });
                 // });
 
@@ -252,7 +250,7 @@ function onTabCreated(tab) {
     }
     if (u2 != undefined) {
         if (u2.href.startsWith(CALLBACK_URL)) {
-            alert("callback found " + u2.href);
+            //alert("callback found " + u2.href);
         }
     }
 }
@@ -278,7 +276,7 @@ function onTabUpdated(tabId, changeInfo, tab) {
         }
         if (u2 != undefined) {
             if (u2.href.startsWith(CALLBACK_URL)) {
-                alert("callback found " + u2.href);
+                //alert("callback found " + u2.href);
             }
         }
     }
@@ -287,17 +285,17 @@ function onTabUpdated(tabId, changeInfo, tab) {
 
 if (chrome) {
     if (chrome.tabs) {
-        alert("chrome.tabs=" + chrome.tabs);
+        //alert("chrome.tabs=" + chrome.tabs);
         chrome.tabs.onCreated.addListener(onTabCreated);
         //chrome.tabs.onActivated.addListener(onTabActivated);
         chrome.tabs.onUpdated.addListener(onTabUpdated);
     }
     if (chrome.runtime) {
-        alert("chrome.runtime=" + chrome.runtime);
+        //alert("chrome.runtime=" + chrome.runtime);
         chrome.runtime.onInstalled.addListener(installExtension);
     }
     if (chrome.pageAction) {
-        alert("chrome.pageAction=" + chrome.pageAction);
+        //alert("chrome.pageAction=" + chrome.pageAction);
         chrome.pageAction.onClicked.addListener(pageActionClick);
     }
 
@@ -306,17 +304,17 @@ if (chrome) {
 try {
     if (browser != undefined) {
         if (browser.tabs) {
-            alert("browser.tabs=" + browser.tabs);
+            //alert("browser.tabs=" + browser.tabs);
         }
         if (browser.runtime) {
-            alert("browser.runtime=" + browser.runtime);
+            //alert("browser.runtime=" + browser.runtime);
         }
         if (browser.pageAction) {
-            alert("browser.pageAction=" + browser.pageAction);
+            //alert("browser.pageAction=" + browser.pageAction);
         }
     }
 
 } catch (exception) {
 
 }
-console.log("end bg.js");
+//console.log("end bg.js");
