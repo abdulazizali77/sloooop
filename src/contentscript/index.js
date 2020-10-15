@@ -13,6 +13,7 @@ var containerDiv;
 var dialogDiv;
 var bearertoken;
 var currentTrackId;
+var currentTrackName;
 var rangeMin = 0;
 var rangeMax = 1;
 var currentPlayingPosition;
@@ -322,26 +323,38 @@ function handleRangeChange(event) {
 function checkPlayingPosition() {
 
 
-    //if rangeMax is default or unset then dont care
-    if (!(rangeMin == 0 && (rangeMax == currentTrackIdDuration || rangeMax == 1))) {
-        //NB: if the max is not set but the min is, the playback cant seek back if it reaches the end
-        //so we have to offset against 1second, however this is a bit iffy and buggy
-        let offset = 0;
-        if (rangeMax == currentTrackIdDuration) {
-            offset = 1;
-        }
-        if (currentPlayingPosition < rangeMin || currentPlayingPosition >= (rangeMax - offset)) {
-            console.log("currentPlayingPosition is outside!" + currentPlayingPosition + " " + rangeMin + " " + rangeMax + " " + (rangeMax - offset));
-            //TODO: a flag to disable jumping to min if less than minimum
-            seek(Number.parseInt(rangeMin) * 1000);
+    let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    let tempTrackName;
+    if (nowt1 != undefined) {
+        tempTrackName = nowt1.innerText;
+    }
+    //FIXME: this might call while
+    if (tempTrackName == currentTrackName) {
+        //if rangeMax is default or unset then dont care
+        if (!(rangeMin == 0 && (rangeMax == currentTrackIdDuration || rangeMax == 1))) {
+            //NB: if the max is not set but the min is, the playback cant seek back if it reaches the end
+            //so we have to offset against 1second, however this is a bit iffy and buggy
+            let offset = 0;
+            if (rangeMax == currentTrackIdDuration) {
+                offset = 1;
+            }
+            if (currentPlayingPosition < rangeMin || currentPlayingPosition >= (rangeMax - offset)) {
+                console.log("DEBUG currentPlayingPosition is outside! tempTrackName=" + tempTrackName + " currentTrackName=" + currentTrackName + " currentTrackId=" + currentTrackId + " currentTrackIdDuration=" + currentTrackIdDuration + " pos=" + currentPlayingPosition + " " + rangeMin + " " + rangeMax + " " + (rangeMax - offset));
+                //TODO: a flag to disable jumping to min if less than minimum
+                seek(Number.parseInt(rangeMin) * 1000);
+            } else {
+                //console.log("currentPlayingPosition within range!" + currentPlayingPosition + " " + rangeMin+" "+rangeMin);
+                //console.log("DEBUG currentPlayingPosition is outside!" + currentTrackId + " currentTrackIdDuration=" + currentTrackIdDuration);
+            }
         } else {
-            //console.log("currentPlayingPosition within range!" + currentPlayingPosition + " " + rangeMin+" "+rangeMin);
+            if (currentPlayingPosition < rangeMin || currentPlayingPosition > rangeMax) {
+                console.log("DEBUG ASSERT shouldnt happen tempTrackName=" + tempTrackName + " currentTrackName=" + currentTrackName + " currentTrackId=" + currentTrackId + " currentTrackIdDuration=" + currentTrackIdDuration + " pos=" + currentPlayingPosition + " " + rangeMin + " " + rangeMax);
+            }
         }
     } else {
-        if (currentPlayingPosition < rangeMin || currentPlayingPosition > rangeMax) {
-            console.log("ASSERT shouldnt happen " + currentPlayingPosition + " " + rangeMin + " " + rangeMax);
-        }
+        console.log("DEBUG track changed! tempTrackName=" + tempTrackName + " currentTrackName=" + currentTrackName + " currentTrackId=" + currentTrackId + " currentTrackIdDuration=" + currentTrackIdDuration + " pos=" + currentPlayingPosition + " " + rangeMin + " " + rangeMax );
     }
+
 }
 
 
@@ -370,6 +383,7 @@ function spotifyInitTrack(token) {
                     console.log("DEBUG  API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
 
                     currentTrackId = trackid;
+                    currentTrackName = trackname;
                     currentTrackIdDuration = trackduration_s;
                     getTrack(trackid).then((result) => {
                         let detail = {
