@@ -21,6 +21,12 @@ var currentTrackIdDuration;
 var playbackController;
 var isNotPremium;
 
+var trackChangeObserver;
+var playbackPositionObserver;
+var logoutBtnObserver;
+var theLogoutBtn;
+var thisTabId;
+
 function injectCssToHead(cssFile) {
     injectLinkToHead(cssFile, "text/css").rel = "stylesheet";
 }
@@ -184,9 +190,6 @@ function secondsToTime(seconds) {
     return minutes + ":" + leftover;
 }
 
-var trackChangeObserver;
-var playbackPositionObserver;
-
 
 //FIXME: some redundant
 const moinit = {
@@ -195,6 +198,9 @@ const moinit = {
     childList: true,
     attributes: true,
     subtree: true
+};
+const moinit2 = {
+    attributes: true
 };
 
 function trackMutationCallback(mutationList, observer) {
@@ -228,6 +234,57 @@ function positionMutationCallback(mutationList, observer) {
     });
 }
 
+function logoutBtnHandler(e) {
+    console.log("DEBUG logoutBtnHandler " + e.target + " " + e.target.innerText);
+    //send message to bg
+    chrome.runtime.sendMessage({type: "user_logout", tab:thisTabId});
+}
+
+function logoutClickedCallback(mutationList, observer) {
+    mutationList.forEach((mutation) => {
+        let data_test_id = mutation.target.getAttribute('aria-expanded');
+        console.log("mutationCallback " + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue + " data_test_id=" + data_test_id);
+        //change the range values
+        if (data_test_id == 'true') {
+            let logoutBtns = $('button:contains("Log out")');
+            try {
+                if (logoutBtns != undefined) {
+
+
+                    for (let logoutBtn of logoutBtns) {
+                        if (logoutBtn.innerText == 'Log out') {
+                            let prevClick = logoutBtn.click;
+                            console.log("DEBUG " + logoutBtn + " logoutBtn.innerText=" + logoutBtn.innerText + " " + prevClick);
+
+                            logoutBtn.addEventListener("click", logoutBtnHandler);
+                            theLogoutBtn = logoutBtn;
+                            console.log("DEBUG logoutBtn" + logoutBtn + " " + logoutBtn.click + " " + prevClick);
+
+                            break;
+                        }
+                    }
+
+                } else {
+                    alert("logoutBtn is undefined");
+                }
+            } catch (e) {
+                console.log("logout mutation error  " + e);
+            }
+        }
+    });
+}
+
+function observeLogout() {
+    let obs = document.querySelectorAll('button[data-testid="user-widget-link"]')[0];
+    if (obs != undefined) {
+        logoutBtnObserver = new MutationObserver(logoutClickedCallback);
+        logoutBtnObserver.observe(obs, moinit2);
+    } else {
+        console.log("ASSERT obs undefined ");
+        setTimeout(observeLogout, 1000);
+    }
+}
+
 function observePlaybackPosition() {
     //current time
     let pbpos = document.getElementsByClassName("playback-bar__progress-time")[0];
@@ -256,6 +313,7 @@ function observeTracks() {
 function setupObservers() {
     observePlaybackPosition();
     observeTracks();
+    observeLogout();
 }
 
 function teardownObservers() {
@@ -352,7 +410,7 @@ function checkPlayingPosition() {
             }
         }
     } else {
-        console.log("DEBUG track changed! tempTrackName=" + tempTrackName + " currentTrackName=" + currentTrackName + " currentTrackId=" + currentTrackId + " currentTrackIdDuration=" + currentTrackIdDuration + " pos=" + currentPlayingPosition + " " + rangeMin + " " + rangeMax );
+        console.log("DEBUG track changed! tempTrackName=" + tempTrackName + " currentTrackName=" + currentTrackName + " currentTrackId=" + currentTrackId + " currentTrackIdDuration=" + currentTrackIdDuration + " pos=" + currentPlayingPosition + " " + rangeMin + " " + rangeMax);
     }
 
 }
@@ -566,7 +624,7 @@ function onMessageHandler(msg, sender, sendResponse) {
         //2. check if playing
         //3. call api if playing
         // "is_playing": false
-
+        thisTabId = msg.tabId;
         checkUserAccount(bearertoken).then((result) => {
             result.json().then(resp => {
                 if (resp.product == 'premium') {

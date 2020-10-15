@@ -114,7 +114,8 @@ function pageActionClick(thistab) {
                         //FIXME: callback hell
                         chrome.tabs.sendMessage(lastTabId,
                             {
-                                "text": 'enable_extension'
+                                "text": 'enable_extension',
+                                "tabId": lastTabId
                             },
                             (result2) => {
                                 console.log("finished enabling message " + result2);
@@ -229,6 +230,10 @@ function handleAuthFlow(uri, tab) {
     }
 }
 
+function handleUserLogout(){
+
+}
+
 function onTabCreated(tab) {
     //check if matches callback
     console.log("onTabCreated " + tab.id + " " + tab.url + " " + tab.pendingUrl);
@@ -284,6 +289,16 @@ function onTabUpdated(tabId, changeInfo, tab) {
 
 }
 
+function backgroundMessageHandler(request, sender, sendResponse) {
+    console.log(sender.tab ?
+        "from a content script:" + sender.tab.url :
+        "from the extension");
+    if (request.type == "user_logout") {
+        console.log("DEBUG "+request.type +" "+request.tab);
+        enabledMap[request.tab] = false;
+    }
+}
+
 if (chrome) {
     if (chrome.tabs) {
         //alert("chrome.tabs=" + chrome.tabs);
@@ -294,11 +309,15 @@ if (chrome) {
     if (chrome.runtime) {
         //alert("chrome.runtime=" + chrome.runtime);
         chrome.runtime.onInstalled.addListener(installExtension);
+        chrome.runtime.onMessage.addListener(backgroundMessageHandler);
     }
     if (chrome.pageAction) {
         //alert("chrome.pageAction=" + chrome.pageAction);
         chrome.pageAction.onClicked.addListener(pageActionClick);
     }
+
+
+
 
 }
 
