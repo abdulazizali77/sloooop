@@ -56,6 +56,8 @@ function installExtension() {
     chrome.runtime.getPlatformInfo((platformInfo) => {
         //alert(platformInfo);
     });
+    //document.querySelectorAll("button[data-testid='login-button']")
+// <button class="_3f37264be67c8f40fa9f76449afdb4bd-scss _1f2f8feb807c94d2a0a7737b433e19a8-scss" type="button" data-testid="login-button">Log in</button>
     if (chrome.declarativeContent != undefined && chrome.declarativeContent.onPageChanged != undefined) {
         chrome.declarativeContent.onPageChanged.removeRules(undefined, function () {
             // With a new rule ...
@@ -75,7 +77,6 @@ function installExtension() {
         });
     }
 }
-
 
 function pageActionClick(thistab) {
 

@@ -6,6 +6,7 @@ import * as winjs from 'winjs';
 import querystring from "querystring";
 import playerSeek from '../shared/spotifyPlayer';
 //import getLoginUrl from "../shared/spotifyauth";
+import checkUserAccount from "../shared/spotifyMe";
 
 
 console.log("start content.js");
@@ -21,7 +22,7 @@ var rangeMax = 1;
 var currentPlayingPosition;
 var currentTrackIdDuration;
 var playbackController;
-
+var isNotPremium;
 function injectCssToHead(cssFile) {
     injectLinkToHead(cssFile, "text/css").rel = "stylesheet";
 }
@@ -384,12 +385,22 @@ function spotifyInitTrack(token) {
                         saveTrack(trackid, 0, trackduration_s);
                     });
                 }
-
-
             });
         }
         if (result.status == 204) {
             console.log(" " + result.status);
+            //fetch value from playbar
+        }
+        // {
+        //     "error" : {
+        //     "status" : 403,
+        //         "message" : "Player command failed: Premium required",
+        //         "reason" : "PREMIUM_REQUIRED"
+        // }
+        // }
+        if (result.status == 403) {
+            console.log(" user is not premium" + result.status);
+            isNotPremium = true;
             //fetch value from playbar
         }
     });
@@ -452,7 +463,8 @@ function getPlaybackController() {
 
 function seek(ms) {
     console.log("seeking to " + ms + " bearertoken=" + bearertoken);
-    if (bearertoken != undefined && bearertoken != '') {
+    if (isNotPremium == false &&
+        (bearertoken != undefined && bearertoken != '') ){
         if (ms != undefined) {
             playerSeek(bearertoken, ms).then((result) => {
                 console.log(result);
@@ -462,7 +474,8 @@ function seek(ms) {
         } else {
             console.log("ASSERT seek ms=" + ms);
         }
-
+    }else{
+        console.log("User is not premium");
     }
 }
 
@@ -520,7 +533,6 @@ window.addEventListener('sloop_position_change', handlePositionChange, false);
 window.addEventListener('sloop_range_change', handleRangeChange, false);
 window.addEventListener('sloop_slider_init', handleDurationChange, false);
 
-
 function onMessageHandler(msg, sender, sendResponse) {
     if (msg.text === 'enable_extension') {
         //open tab
@@ -528,19 +540,33 @@ function onMessageHandler(msg, sender, sendResponse) {
         //2. check if playing
         //3. call api if playing
         // "is_playing": false
-        setupOverlay().then(() => {
 
-            adjustContainer();
-            //FIXME: check if setup first
-            //the track mutation will call spotifyInitTrack inevitably
-            setupObservers();
+        checkUserAccount(bearertoken).then((result)=>{
+            result.json().then(resp => {
+                if(resp.product=='premium'){
+                    setupOverlay().then(() => {
 
-            //getPlaybackController();
-            spotifyInitTrack(bearertoken);
-            //if 204
-            enabled = true;
-            sendResponse(true);
+                        adjustContainer();
+                        //FIXME: check if setup first
+                        //the track mutation will call spotifyInitTrack inevitably
+                        setupObservers();
+
+                        //getPlaybackController();
+                        spotifyInitTrack(bearertoken);
+                        //if 204
+                        enabled = true;
+                        isNotPremium = false;
+                        sendResponse(true);
+                    });
+                }else{
+                    isNotPremium = true;
+                    alert("Not Premium");
+                }
+            });
+        }).catch((e)=>{
+
         });
+
     }
     if (msg.text === 'disable_extension') {
         if(enabled == true){

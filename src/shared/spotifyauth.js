@@ -1,3 +1,48 @@
+// var me1 = {
+//     "country": "MY",
+//     "display_name": "azizbodoh",
+//     "email": "triyae@hotmail.com",
+//     "explicit_content": {
+//     "filter_enabled": false,
+//         "filter_locked": false
+// },
+//     "external_urls": {
+//     "spotify": "https://open.spotify.com/user/3dywcx5zqj4lwuu8l7tfz796v"
+// },
+//     "followers": {
+//     "href": null,
+//         "total": 0
+// },
+//     "href": "https://api.spotify.com/v1/users/3dywcx5zqj4lwuu8l7tfz796v",
+//     "id": "3dywcx5zqj4lwuu8l7tfz796v",
+//     "images": [],
+//     "product": "premium",
+//     "type": "user",
+//     "uri": "spotify:user:3dywcx5zqj4lwuu8l7tfz796v"
+// }
+//https://api.spotify.com/v1/me
+// var me2 ={
+//     "country": "MY",
+//     "display_name": "Bas",
+//     "email": "basrina@asgio.net",
+//     "explicit_content": {
+//     "filter_enabled": false,
+//         "filter_locked": false
+// },
+//     "external_urls": {
+//     "spotify": "https://open.spotify.com/user/gcq28tao9rgocpeglz3crv0lp"
+// },
+//     "followers": {
+//     "href": null,
+//         "total": 0
+// },
+//     "href": "https://api.spotify.com/v1/users/gcq28tao9rgocpeglz3crv0lp",
+//     "id": "gcq28tao9rgocpeglz3crv0lp",
+//     "images": [],
+//     "product": "open",
+//     "type": "user",
+//     "uri": "spotify:user:gcq28tao9rgocpeglz3crv0lp"
+// }
 // fetch("https://api.spotify.com/v1/views/desktop-home?timestamp=2020-10-14T06%3A18%3A35.350Z&platform=web&content_limit=10&limit=20&types=album%2Cplaylist%2Cartist%2Cshow%2Cstation&image_style=gradient_overlay&country=MY&market=from_token&locale=en", {
 //     "headers": {
 //         "accept": "application/json",
@@ -14,7 +59,7 @@
 //     "mode": "cors",
 //     "credentials": "include"
 // });
-
+/*
 let desktophome = {
     "content" : {
     "href" : "https://api.spotify.com/v1/views/desktop-home?content_limit=10&locale=en&platform=web&country=MY&timestamp=2020-10-14T06:18:35.35&types=album%2Cplaylist%2Cartist%2Cshow%2Cstation&limit=20&offset=0",
@@ -6863,7 +6908,7 @@ let desktophome = {
     "tag_line" : null,
     "type" : "view"
 }
-
+*/
 import querystring from 'querystring';
 
 export default function getLoginUrl() {
