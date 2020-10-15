@@ -54,7 +54,7 @@ function tokenTimeLeft() {
 function installExtension() {
     alert(chrome.runtime.id);
     chrome.runtime.getPlatformInfo((platformInfo) => {
-        alert(platformInfo);
+        //alert(platformInfo);
     });
     if (chrome.declarativeContent != undefined && chrome.declarativeContent.onPageChanged != undefined) {
         chrome.declarativeContent.onPageChanged.removeRules(undefined, function () {
@@ -64,7 +64,8 @@ function installExtension() {
                     // That fires when a page's URL contains a 'g' ...
                     conditions: [
                         new chrome.declarativeContent.PageStateMatcher({
-                            pageUrl: {},
+                            pageUrl: { hostEquals: 'open.spotify.com', schemes: ['https']},
+                            css: ["div[class='playback-bar']"]
                         })
                     ],
                     // And shows the extension's page action.
