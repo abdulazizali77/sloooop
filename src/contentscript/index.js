@@ -24,9 +24,11 @@ var isNotPremium;
 var trackChangeObserver;
 var playbackPositionObserver;
 var logoutBtnObserver;
+var playBtnObserver;
 var theLogoutBtn;
 
 var prevClick;
+
 function injectCssToHead(cssFile) {
     injectLinkToHead(cssFile, "text/css").rel = "stylesheet";
 }
@@ -203,6 +205,17 @@ const moinit2 = {
     attributes: true
 };
 
+function playButtonMutationCallback(mutationList, observer) {
+    mutationList.forEach((mutation) => {
+        console.log("DEBUG button mutation callback" + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue);
+        if (mutation.target.title == "Play") {
+            console.log("DEBUG button mutation callback its playing? " + mutation.type + " " + mutation.target + " mutation.target.title=" + mutation.target.title);
+        } else if (mutation.target.title == "Pause") {
+            console.log("DEBUG button mutation callback its pausing? " + mutation.type + " " + mutation.target + " mutation.target.title=" + mutation.target.title);
+        }
+    });
+}
+
 function trackMutationCallback(mutationList, observer) {
     // mutatation.target.data
     // mutatation.target.nodeType
@@ -237,8 +250,8 @@ function positionMutationCallback(mutationList, observer) {
 function logoutBtnHandler(e) {
     console.log("DEBUG logoutBtnHandler " + e.target + " " + e.target.innerText);
     //send message to bg
-    chrome.runtime.sendMessage({type: "user_logout"}, function(response){
-        console.log("DEBUG prevClick="+prevClick);
+    chrome.runtime.sendMessage({type: "user_logout"}, function (response) {
+        console.log("DEBUG prevClick=" + prevClick);
         prevClick.apply();
     });
 }
@@ -276,6 +289,23 @@ function logoutClickedCallback(mutationList, observer) {
             }
         }
     });
+}
+
+function observePlayStart() {
+    let obs = document.querySelectorAll("button[data-testid='control-button-play']")[0];
+    //if undefined, it could mean that it is already playing
+    //how to do compound or fallback css selector?
+    if (obs == undefined) {
+        obs = document.querySelectorAll("button[data-testid='control-button-pause']")[0];
+    }
+    //if its still undefined, we try this again
+    if (obs != undefined) {
+        playBtnObserver = new MutationObserver(playButtonMutationCallback);
+        playBtnObserver.observe(obs, moinit);
+    } else {
+        console.log("ASSERT obs undefined ");
+        setTimeout(observePlayStart, 1000);
+    }
 }
 
 function observeLogout() {
@@ -478,6 +508,8 @@ function spotifyInitTrack(token) {
         if (result.status == 204) {
             console.log(" " + result.status);
             //fetch value from playbar
+            //this would mean there was no playback
+            observePlayStart();
         }
         // {
         //     "error" : {
