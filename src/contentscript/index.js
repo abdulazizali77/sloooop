@@ -206,12 +206,28 @@ const moinit2 = {
 };
 
 function playButtonMutationCallback(mutationList, observer) {
+    console.log("DEBUG playButtonMutationCallback");
+    let initRequestMade = false;
     mutationList.forEach((mutation) => {
-        console.log("DEBUG button mutation callback" + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue);
-        if (mutation.target.title == "Play") {
-            console.log("DEBUG button mutation callback its playing? " + mutation.type + " " + mutation.target + " mutation.target.title=" + mutation.target.title);
-        } else if (mutation.target.title == "Pause") {
-            console.log("DEBUG button mutation callback its pausing? " + mutation.type + " " + mutation.target + " mutation.target.title=" + mutation.target.title);
+        console.log("DEBUG playButtonMutationCallback button mutation callback" + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue);
+        if (mutation.target.title === "Play") {
+            console.log("DEBUG playButtonMutationCallback is pausing " + mutation.type + " " + mutation.target + " mutation.target.title=" + mutation.target.title);
+            //handle pausing
+        } else if (mutation.target.title === "Pause") {
+            console.log("DEBUG playButtonMutationCallback is playing " + mutation.type + " " + mutation.target + " mutation.target.title=" + mutation.target.title);
+            //handle playing
+            //if currentTrackId is still undefined AND there was no request
+            if (currentTrackId === undefined && initRequestMade === false) {
+                spotifyInitTrack(bearertoken).then((r) => {
+                    console.log("spotifyInitTrack successful " + r.status + " " + r.trackId + " " + r.trackName);
+                    //at this point we can disconnect the observer
+                    playBtnObserver.disconnect();
+                }).catch((e) => {
+                    console.log("spotifyInitTrack " + bearertoken + " was unsuccessful so we have to try again");
+                    initRequestMade = false;
+                });
+            }
+
         }
     });
 }
@@ -227,6 +243,7 @@ function trackMutationCallback(mutationList, observer) {
         console.log("TRACK CHANGE TRIGGER mutationCallback " + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue);
         //make api call
         //TODO: check validity of token
+        //FIXME: could this actually be called multiple times?
         spotifyInitTrack(bearertoken);
     });
 }
@@ -238,6 +255,7 @@ function positionMutationCallback(mutationList, observer) {
         console.log("mutationCallback " + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue);
         //change the range values
 
+        //FIXME: are these events being triggered multiple times?
         var event = new CustomEvent("sloop_position_change", {
             detail: {
                 position: position
@@ -301,7 +319,7 @@ function observePlayStart() {
     //if its still undefined, we try this again
     if (obs != undefined) {
         playBtnObserver = new MutationObserver(playButtonMutationCallback);
-        playBtnObserver.observe(obs, moinit);
+        playBtnObserver.observe(obs, moinit2);
     } else {
         console.log("ASSERT obs undefined ");
         setTimeout(observePlayStart, 1000);
@@ -348,6 +366,7 @@ function setupObservers() {
     observePlaybackPosition();
     observeTracks();
     observeLogout();
+    observePlayStart();
 }
 
 function teardownObservers() {
@@ -451,78 +470,88 @@ function checkPlayingPosition() {
 
 
 function spotifyInitTrack(token) {
-    let qs = {};
-    let fetchOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + token
-        }
+    return new Promise((resolve, reject) => {
+        let qs = {};
+        let fetchOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
 
-    };
-    let uri = SPOTIFY_PLAYER_EP + querystring.stringify(qs);
-    fetch(uri, fetchOptions).then((result) => {
+        };
+        let uri = SPOTIFY_PLAYER_EP + querystring.stringify(qs);
+        fetch(uri, fetchOptions).then((result) => {
 
-        console.log(result.status);
-        if (result.status == 200) {
-            result.json().then(resp => {
-                if (resp.item.id != undefined) {
-                    let trackid = resp.item.id;
-                    let trackname = resp.item.name;
-                    let trackduration = resp.item.duration_ms;
-                    let trackduration_s = Math.ceil(Number.parseInt(resp.item.duration_ms) / 1000);
-                    let trackprogress = resp.progress_ms;
-                    console.log("DEBUG  API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
+            console.log(result.status);
+            if (result.status == 200) {
+                result.json().then(resp => {
+                    if (resp.item.id != undefined) {
+                        let trackid = resp.item.id;
+                        let trackname = resp.item.name;
+                        let trackduration = resp.item.duration_ms;
+                        let trackduration_s = Math.ceil(Number.parseInt(resp.item.duration_ms) / 1000);
+                        let trackprogress = resp.progress_ms;
+                        console.log("DEBUG  API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
 
-                    currentTrackId = trackid;
-                    currentTrackName = trackname;
-                    currentTrackIdDuration = trackduration_s;
-                    getTrack(trackid).then((result) => {
-                        let detail = {
-                            duration: trackduration_s,
-                            min: 0,
-                            max: trackduration_s
-                        };
+                        currentTrackId = trackid;
+                        currentTrackName = trackname;
+                        currentTrackIdDuration = trackduration_s;
+                        getTrack(trackid).then((result) => {
+                            let detail = {
+                                duration: trackduration_s,
+                                min: 0,
+                                max: trackduration_s
+                            };
 
-                        if (result != undefined) {
-                            console.log(result.min + " " + result.max);
-                            //emit event
-                            if (result.min != undefined) {
-                                detail.min = result.min;
+                            if (result != undefined) {
+                                console.log(result.min + " " + result.max);
+                                //emit event
+                                if (result.min != undefined) {
+                                    detail.min = result.min;
+                                }
+                                if (result.max != undefined) {
+                                    detail.max = result.max;
+                                }
                             }
-                            if (result.max != undefined) {
-                                detail.max = result.max;
-                            }
-                        }
 
-                        var event = new CustomEvent("sloop_slider_init", {detail: detail});
-                        window.dispatchEvent(event);
+                            var event = new CustomEvent("sloop_slider_init", {detail: detail});
+                            window.dispatchEvent(event);
 
-                    }).catch((error) => {
-                        //FIXME: necessary?
-                        saveTrack(trackid, 0, trackduration_s);
-                    });
-                }
-            });
-        }
-        if (result.status == 204) {
-            console.log(" " + result.status);
-            //fetch value from playbar
-            //this would mean there was no playback
-            observePlayStart();
-        }
-        // {
-        //     "error" : {
-        //     "status" : 403,
-        //         "message" : "Player command failed: Premium required",
-        //         "reason" : "PREMIUM_REQUIRED"
-        // }
-        // }
-        if (result.status == 403) {
-            console.log(" user is not premium" + result.status);
-            isNotPremium = true;
-            //fetch value from playbar
-        }
+                        }).catch((error) => {
+                            //FIXME: necessary?
+                            saveTrack(trackid, 0, trackduration_s);
+                        }).finally(() => {
+                            resolve({trackId: currentTrackId, trackName: currentTrackName, status: result.status});
+                        });
+                    } else {
+                        //FIXME: what are the reasons that item.id would be undefined ?
+                        reject("item id undefined");
+                    }
+                });
+            }
+            if (result.status === 204) {
+                console.log(" " + result.status);
+                //fetch value from playbar
+                //this would mean there was no playback
+                //FIXME: getting uncaught in promise but why?
+                reject(result.status);
+            }
+            // {
+            //     "error" : {
+            //     "status" : 403,
+            //         "message" : "Player command failed: Premium required",
+            //         "reason" : "PREMIUM_REQUIRED"
+            // }
+            // }
+            if (result.status === 403) {
+                console.log(" user is not premium" + result.status);
+                //FIXME: move this out
+                isNotPremium = true;
+                reject(result.status);
+                //fetch value from playbar
+            }
+        });
     });
 }
 
