@@ -244,7 +244,11 @@ function trackMutationCallback(mutationList, observer) {
         //make api call
         //TODO: check validity of token
         //FIXME: could this actually be called multiple times?
-        spotifyInitTrack(bearertoken);
+        spotifyInitTrack(bearertoken).then((res) => {
+            console.log(res)
+        }).catch((e) => {
+            console.log(e)
+        });
     });
 }
 
@@ -534,7 +538,6 @@ function spotifyInitTrack(token) {
                 console.log(" " + result.status);
                 //fetch value from playbar
                 //this would mean there was no playback
-                //FIXME: getting uncaught in promise but why?
                 reject(result.status);
             }
             // {
@@ -700,7 +703,11 @@ function onMessageHandler(msg, sender, sendResponse) {
                         setupObservers();
 
                         //getPlaybackController();
-                        spotifyInitTrack(bearertoken);
+                        spotifyInitTrack(bearertoken).then((res) => {
+                            console.log(res)
+                        }).catch((e) => {
+                            console.log(e)
+                        });
                         //if 204
                         enabled = true;
                         isNotPremium = false;
