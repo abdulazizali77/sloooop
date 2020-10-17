@@ -2,7 +2,6 @@ import './jquery-global';
 import 'jqueryui';
 import querystring from "querystring";
 import playerSeek from '../shared/spotifyPlayer';
-import checkUserAccount from "../shared/spotifyMe";
 
 
 console.log("start content.js");
@@ -685,6 +684,18 @@ window.addEventListener('sloop_position_change', handlePositionChange, false);
 window.addEventListener('sloop_range_change', handleRangeChange, false);
 window.addEventListener('sloop_slider_init', handleDurationChange, false);
 
+function checkUserLoggedIn() {
+    return new Promise((resolve, reject) => {
+        //data-testid="user-widget-name"
+        let accountName = document.querySelectorAll("span[data-testid='user-widget-name']");
+        if (accountName.length === 0) {
+            reject(false);
+        } else {
+            resolve({accountName: accountName[0].innerText});
+        }
+    });
+}
+
 function onMessageHandler(msg, sender, sendResponse) {
     if (msg.text === 'enable_extension') {
         //open tab
@@ -692,37 +703,55 @@ function onMessageHandler(msg, sender, sendResponse) {
         //2. check if playing
         //3. call api if playing
         // "is_playing": false
-        checkUserAccount(bearertoken).then((result) => {
-            result.json().then(resp => {
-                if (resp.product == 'premium') {
-                    setupOverlay().then(() => {
 
-                        adjustContainer();
-                        //FIXME: check if setup first
-                        //the track mutation will call spotifyInitTrack inevitably
-                        setupObservers();
+        // NB: at this stage it is assumed that user product is always 'Premium'
+        // checkUserAccount(bearertoken).then((result) => {
+        //     result.json().then(resp => {
+        //         if (resp.product == 'premium') {
+        setupOverlay().then(() => {
 
-                        //getPlaybackController();
-                        spotifyInitTrack(bearertoken).then((res) => {
-                            console.log(res)
-                        }).catch((e) => {
-                            console.log(e)
-                        });
-                        //if 204
-                        enabled = true;
-                        isNotPremium = false;
-                        sendResponse(true);
-                    });
-                } else {
-                    isNotPremium = true;
-                    alert("Not Premium");
-                }
+            adjustContainer();
+            //FIXME: check if setup first
+            //the track mutation will call spotifyInitTrack inevitably
+            setupObservers();
+
+            //getPlaybackController();
+            spotifyInitTrack(bearertoken).then((res) => {
+                console.log(res)
+            }).catch((e) => {
+                console.log(e)
             });
-        }).catch((e) => {
+            //if 204
+            enabled = true;
+            isNotPremium = false;
+            sendResponse(true);
+        });
+        //         } else {
+        //             isNotPremium = true;
+        //             alert("Not Premium");
+        //         }
+        //     });
+        // }).catch((e) => {
+        //
+        // });
 
+    }
+    if (msg.text === 'display_premium_warning') {
+        isNotPremium = false;
+        //TODO: show winjs dialog #27
+        alert("Not Premium");
+        sendResponse(true);
+    }
+
+    if (msg.text === 'is_user_logged_in') {
+        checkUserLoggedIn().then((result)=>{
+            sendResponse(result);
+        }).catch((e)=>{
+            sendResponse(false);
         });
 
     }
+
     if (msg.text === 'disable_extension') {
         if (enabled == true) {
             teardownOverlay(sendResponse);

@@ -6,14 +6,19 @@
 import getLoginUrl from "../shared/spotifyAuth";
 //import browserpolyfill from 'browser-polyfill';
 import querystring from 'querystring';
+import checkUserAccount from "../shared/spotifyMe";
 
 //console.log("start bg.js");
 const CALLBACK_URL = 'https://www.example.com';
+const VALID_HOST = 'open.spotify.com';
 
 export default function init() {
     //alert("bg init");
 }
 var enabledMap = {};
+var tabUserMap = {};
+
+var bearerUserMap = {};
 var lastTabId = -1;
 var lastWindowId = -1;
 var lastTabIndex = -1;
@@ -21,6 +26,7 @@ var expectingBearer = false;
 var bearerFetchTimeStamp;
 var bearerFetchTimeStampExpire;
 var bearerToken;
+var currentUser;
 
 function hasToken() {
     let res = false;
@@ -87,7 +93,7 @@ function pageActionClick(thistab) {
         lastTabId = thistab.id;
         lastTabIndex = thistab.index;
         lastWindowId = thistab.windowId;
-        if (!hasToken()) {
+        if (currentUser === undefined && !hasToken()) {
             expectingBearer = true;
             chrome.tabs.create({url: getLoginUrl()}, function (tab) {
                 console.log("tab=" + tab.id + "\n" +
@@ -102,39 +108,16 @@ function pageActionClick(thistab) {
             //FIXME: dupe
             console.log("hasToken=" + hasToken() + " isTokenValid=" + isTokenValid());
             console.log("tokenTimeLeft=" + tokenTimeLeft());
-            chrome.tabs.sendMessage(lastTabId,
-                {
-                    "text": 'set_bearer',
-                    "payload": {bearer: bearerToken}
-                },
-                (result2) => {
-                    console.log("finished set bearer" + result2);
-                    chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
-                        console.log("DEBUG  focused lastTabId=" + lastTabId);
-                        //FIXME: callback hell
-                        chrome.tabs.sendMessage(lastTabId,
-                            {
-                                "text": 'enable_extension'
-
-                            },
-                            (result2) => {
-                                console.log("finished enabling message " + result2);
-                            });
-                        enabledMap[lastTabId] = true;
-                    });
+            enableExtensionFlow(bearerToken)
+                .then((r) => {
+                    console.log(r);
+                })
+                .catch((e) => {
+                    console.log(e);
                 });
-            enabledMap[lastTabId] = true;
+            //FIXME: redundant?
+            //enabledMap[lastTabId] = true;
         }
-        //race condition
-        //after we get the key pass it to the content script
-        // chrome.tabs.sendMessage(thistab.id,
-        //     {
-        //         "text": 'enable_extension'
-        //     },
-        //     (result2) => {
-        //         console.log("finished enabling message " + result2);
-        //     });
-        // enabledMap[thistab.id] = true;
 
     } else {
         chrome.tabs.sendMessage(thistab.id,
@@ -165,7 +148,6 @@ function handleAuthFlow(uri, tab) {
     //TODO: should we verify the opening tab?
     //FIXME: if the user declined to accept well never get here and the bearer will be left undefined
     if (uri.startsWith(CALLBACK_URL)) {
-
         let queryMap = uri.split("#")[1];
         let obj1 = querystring.parse(queryMap);
         console.log(obj1);
@@ -180,59 +162,127 @@ function handleAuthFlow(uri, tab) {
         bearerFetchTimeStamp = Date.now();
         bearerFetchTimeStampExpire = bearerFetchTimeStamp + (Number.parseFloat(obj1.expires_in) * 1000);
 
+        //fetch the user and associate the bearer
         chrome.tabs.remove(tab.id, () => {
             console.log("DEBUG  callback closed tab.id=" + tab.id + " lastTabId=" + lastTabId);
-            if (lastTabId != undefined && lastTabId != -1) {
-                //doesnt work, probably need to send message
-                //let codeStr = "setBearer('"+obj1.access_token+"');";
-
-                //FIXME: should set expectingBearer = true again if we didnt get the correct callback
-                chrome.tabs.sendMessage(lastTabId,
-                    {
-                        "text": 'set_bearer',
-                        "payload": {bearer: obj1.access_token}
-                    },
-                    (result2) => {
-                        console.log("finished set bearer" + result2);
-                        chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
-                            console.log("DEBUG  focused lastTabId=" + lastTabId);
-                            //FIXME: callback hell
-                            chrome.tabs.sendMessage(lastTabId,
-                                {
-                                    "text": 'enable_extension'
-
-                                },
-                                (result2) => {
-                                    console.log("finished enabling message " + result2);
+            if (lastTabId !== undefined && lastTabId !== -1) {
+                //check account first
+                //save user id of bearer
+                checkUserAccount(obj1.access_token)
+                    .then((result) => {
+                        result.json().then(body => {
+                            let userId = body.id;
+                            bearerUserMap[obj1.access_token] = userId;
+                            enableExtensionFlow(obj1.access_token)
+                                .then((r) => {
+                                    console.log(r);
+                                })
+                                .catch((e) => {
+                                    console.log(e);
                                 });
-                            enabledMap[lastTabId] = true;
                         });
+
+                    })
+                    .catch((e) => {
+                        console.log(e);
                     });
-                // chrome.tabs.executeScript(lastTabId, {code:codeStr, runAt:"document_end"}, (result)=>{
-                //     console.log("executeScript lastTabId="+lastTabId+"\n"+
-                //         codeStr+"\n"+
-                //         +"\n"+
-                //         "result="+result
-                //     );
-                //     chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
-                //         console.log("DEBUG  focused lastTabId=" + lastTabId);
-                //     });
-                // });
-
-                //set the bearer token in the contentscript
-
-                //let code = "var bearerToken = obj1.access_token;";
-
             }
         });
-
-        //refocus to previous tab
-        //tabIdOfEnabledExtension
     }
 }
 
-function handleUserLogout(){
+function cachedCheckUserAccount(token) {
+    return new Promise((resolve, reject) => {
+        if (currentUser === undefined) {
+            checkUserAccount(token)
+                .then((result) => {
+                    result.json().then(body => {
+                        currentUser = body;
+                        resolve(currentUser);
+                    }).catch((e) => {
+                        reject(e);
+                    });
 
+                })
+                .catch((e) => {
+                    //FIXME: when can this happen and how to handle and retry?
+                    reject(e);
+                });
+
+        } else {
+            resolve(currentUser);
+        }
+    });
+}
+
+function enableExtensionFlow(bearerToken) {
+    return new Promise((resolve, reject) => {
+        //FIXME: how to resolve successive user calls?
+        cachedCheckUserAccount(bearerToken)
+
+            .then((resp) => {
+                //check premium
+                let userId = resp.id;
+
+                if (bearerUserMap[bearerToken] === undefined || bearerUserMap[bearerToken] !== userId) {
+                    console.log("DEBUG USER the current user=" + userId + " token is empty");
+                    //TODO: do something, what?
+                    alert("DEBUG USER the current user=" + userId + " token is empty");
+                } else {
+                    console.log("DEBUG USER current user=" + userId + " token is " + bearerUserMap[bearerToken]);
+                }
+                if (resp.product === 'premium') {
+                    chrome.tabs.sendMessage(lastTabId,
+                        {
+                            "text": 'set_bearer',
+                            "payload": {bearer: bearerToken}
+                        },
+                        (result2) => {
+                            console.log("finished set bearer" + result2);
+                            //FIXME: can we not use these globals? how?
+                            chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
+                                console.log("DEBUG  focused lastTabId=" + lastTabId + " lastWindowId=" + lastWindowId + " " + lastTabIndex);
+                                //FIXME: callback hell
+                                chrome.tabs.sendMessage(lastTabId,
+                                    {
+                                        "text": 'enable_extension'
+
+                                    },
+                                    (result2) => {
+                                        console.log("finished enabling message " + result2);
+                                        resolve(true);
+                                    });
+                                enabledMap[lastTabId] = true;
+
+                            });
+                        });
+                } else {
+                    chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
+                        console.log("DEBUG not premium! focused lastTabId=" + lastTabId + " lastWindowId=" + lastWindowId + " " + lastTabIndex);
+                        //FIXME: callback hell
+                        currentUser = undefined;
+                        chrome.tabs.sendMessage(lastTabId,
+                            {
+                                "text": 'display_premium_warning'
+                            },
+                            (result2) => {
+                                console.log("finished enabling message " + result2);
+                                resolve(true);
+                            });
+
+                    });
+                }
+            })
+            .catch((e) => {
+                reject(e);
+            });
+        //FIXME: where to call reject?
+    });
+}
+
+function handleUserLogout() {
+    currentUser = undefined;
+    bearerToken = undefined;
 }
 
 function onTabCreated(tab) {
@@ -243,51 +293,64 @@ function onTabCreated(tab) {
     if (tab.url != undefined && tab.url != "") {
         u1 = new URL(tab.url);
     }
-    let u2;
-
-    if (tab.pendingUrl != undefined && tab.pendingUrl != "") {
-        u2 = new URL(tab.pendingUrl);
-    }
 
     if (u1 != undefined) {
         if (u1.href.startsWith(CALLBACK_URL)) {
             console.log("callback found " + u1.href);
         }
-
-    }
-    if (u2 != undefined) {
-        if (u2.href.startsWith(CALLBACK_URL)) {
-            //alert("callback found " + u2.href);
-        }
     }
 }
 
 function onTabUpdated(tabId, changeInfo, tab) {
+
     //check if matches callback
-
-
     if (changeInfo.status === 'complete') {
-        console.log("onTabUpdated " + tab.id + " " + tab.url + " " + tab.pendingUrl + " " + changeInfo.status);
+        //FIXME: find out if user logged out and then invalidate currentUser #39
+        console.log("DEBUG onTabUpdated currentUser=" + currentUser + " tab.id=" + tab.id + " " + tab.url + " " + changeInfo.status);
+
         let u1;
-        if (tab.url != undefined && tab.url != "") {
+        if (tab.url !== undefined && tab.url !== "") {
             u1 = new URL(tab.url);
         }
-        let u2;
 
-        if (tab.pendingUrl != undefined && tab.pendingUrl != "") {
-            u2 = new URL(tab.pendingUrl);
-        }
-
-        if ((expectingBearer == true && u1 != undefined)) {
+        if ((expectingBearer === true && u1 !== undefined)) {
             handleAuthFlow(u1.href, tab);
         }
-        if (u2 != undefined) {
-            if (u2.href.startsWith(CALLBACK_URL)) {
-                //alert("callback found " + u2.href);
-            }
+
+        if(u1.host === VALID_HOST && expectingBearer !== true ){
+            isUserLoggedIn(tabId).then((result)=>{
+                console.log(result.accountName+" is logged in");
+            }).catch(()=>{
+                console.log("user logged out");
+                handleUserLogout();
+            });
         }
+
     }
 
+}
+
+function isUserLoggedIn(tabId){
+    return new Promise((resolve, reject)=>{
+        //send message
+        chrome.tabs.sendMessage(tabId,
+            {
+                "text": 'is_user_logged_in'
+            },
+            (result) => {
+                if(result === undefined || result === false){
+                    reject(false);
+                }else{
+                    resolve(result);
+                }
+            });
+    });
+}
+function onTabRemoved(tabId, removeInfo) {
+    if (enabledMap[tabId] !== undefined && enabledMap[tabId] === true) {
+        enabledMap[tabId] = false;
+        currentUser = undefined;
+    }
 }
 
 function backgroundMessageHandler(request, sender, sendResponse) {
@@ -295,7 +358,7 @@ function backgroundMessageHandler(request, sender, sendResponse) {
         "from a content script:" + sender.tab.url :
         "from the extension");
     if (request.type == "user_logout") {
-        console.log("DEBUG "+request.type +" "+request.tab+" "+sender.tab.id);
+        console.log("DEBUG " + request.type + " " + request.tab + " " + sender.tab.id);
         chrome.tabs.sendMessage(sender.tab.id,
             {
                 "text": 'disable_extension'
@@ -304,7 +367,7 @@ function backgroundMessageHandler(request, sender, sendResponse) {
                 console.log("finished disabling message " + result2);
             });
         enabledMap[sender.tab.id] = false;
-        bearerToken = undefined;
+        handleUserLogout();
         sendResponse();
     }
 }
@@ -313,6 +376,7 @@ if (chrome) {
     if (chrome.tabs) {
         //alert("chrome.tabs=" + chrome.tabs);
         chrome.tabs.onCreated.addListener(onTabCreated);
+        chrome.tabs.onRemoved.addListener(onTabRemoved);
         //chrome.tabs.onActivated.addListener(onTabActivated);
         chrome.tabs.onUpdated.addListener(onTabUpdated);
     }
@@ -325,8 +389,6 @@ if (chrome) {
         //alert("chrome.pageAction=" + chrome.pageAction);
         chrome.pageAction.onClicked.addListener(pageActionClick);
     }
-
-
 
 
 }
