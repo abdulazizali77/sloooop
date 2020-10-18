@@ -70,8 +70,9 @@ function installExtension() {
                     // That fires when a page's URL contains a 'g' ...
                     conditions: [
                         new chrome.declarativeContent.PageStateMatcher({
-                            pageUrl: {hostEquals: 'open.spotify.com', schemes: ['https']},
-                            css: ["div[class='playback-bar']"]
+                            pageUrl: {hostEquals: VALID_HOST, schemes: ['https']}
+                            // ,
+                            // css: ["div[class='playback-bar']"]
                         })
                     ],
                     // And shows the extension's page action.
@@ -82,7 +83,36 @@ function installExtension() {
     }
 }
 
+//NB: always expects that the url is VALID_HOST but we do this rather redundant check anyways?
+function updateIcon(thistab) {
+    let u1 = new URL(thistab.url);
+    if (u1.host === VALID_HOST) {
+        if (enabledMap[thistab.id] === false || enabledMap[thistab.id] === undefined) {
+
+            chrome.pageAction.setIcon({tabId: thistab.id, path: "images/32_1_inactive.png"}, (r) => {
+                console.log("setIcon " + r);
+            });
+        } else if (enabledMap[thistab.id] === true) {
+            chrome.pageAction.setIcon({tabId: thistab.id, path: "images/32_2_active.png"}, (r) => {
+                console.log("setIcon " + r);
+            });
+        }
+    } else {
+        alert("ASSERT " + u1.host);
+    }
+
+    // else {
+    //     console.log("updateIcon " + thistab.id + " " + thistab.url);
+    //     chrome.pageAction.setIcon({tabId: thistab.id, path: "images/32_0_unavailable.png"}, (r) => {
+    //         console.log("setIcon " + r);
+    //     });
+    // }
+}
+
 function pageActionClick(thistab) {
+
+    console.log("DEBUG pageActionClick " + thistab.id);
+    //does this trigger for unavailable
 
     if (enabledMap[thistab.id] == undefined) {
         enabledMap[thistab.id] = false;
@@ -111,12 +141,13 @@ function pageActionClick(thistab) {
             enableExtensionFlow(bearerToken)
                 .then((r) => {
                     console.log(r);
+                    updateIcon(thistab);
                 })
                 .catch((e) => {
                     console.log(e);
                 });
             //FIXME: redundant?
-            //enabledMap[lastTabId] = true;
+
         }
 
     } else {
@@ -126,9 +157,12 @@ function pageActionClick(thistab) {
             },
             (result2) => {
                 console.log("finished disabling message " + result2);
+                enabledMap[thistab.id] = false;
+                updateIcon(thistab);
             });
-        enabledMap[thistab.id] = false;
     }
+
+
 }
 
 function injectScriptPath(tabId, scriptFilePath, runAt) {
@@ -175,7 +209,10 @@ function handleAuthFlow(uri, tab) {
                             bearerUserMap[obj1.access_token] = userId;
                             enableExtensionFlow(obj1.access_token)
                                 .then((r) => {
-                                    console.log(r);
+                                    console.log(r + " " + enabledMap[tab.id] + " tab.url=" + tab.url);
+                                    enabledMap[lastTabId] = true;//???
+                                    //WTF
+                                    updateIcon({id: lastTabId, url: "https://"+VALID_HOST});
                                 })
                                 .catch((e) => {
                                     console.log(e);
@@ -289,6 +326,7 @@ function onTabCreated(tab) {
     //check if matches callback
     console.log("onTabCreated " + tab.id + " " + tab.url + " " + tab.pendingUrl);
 
+
     let u1;
     if (tab.url != undefined && tab.url != "") {
         u1 = new URL(tab.url);
@@ -315,41 +353,45 @@ function onTabUpdated(tabId, changeInfo, tab) {
 
         if ((expectingBearer === true && u1 !== undefined)) {
             handleAuthFlow(u1.href, tab);
+
         }
 
-        if(u1.host === VALID_HOST && expectingBearer !== true ){
-            isUserLoggedIn(tabId).then((result)=>{
-                console.log(result.accountName+" is logged in");
-            }).catch(()=>{
+        if (u1.host === VALID_HOST && expectingBearer !== true) {
+            isUserLoggedIn(tabId).then((result) => {
+                console.log(result.accountName + " is logged in");
+            }).catch(() => {
                 console.log("user logged out");
                 handleUserLogout();
             });
+            updateIcon(tab);
         }
+
 
     }
 
 }
 
-function isUserLoggedIn(tabId){
-    return new Promise((resolve, reject)=>{
+function isUserLoggedIn(tabId) {
+    return new Promise((resolve, reject) => {
         //send message
         chrome.tabs.sendMessage(tabId,
             {
                 "text": 'is_user_logged_in'
             },
             (result) => {
-                if(result === undefined || result === false){
+                if (result === undefined || result === false) {
                     reject(false);
-                }else{
+                } else {
                     resolve(result);
                 }
             });
     });
 }
+
 function onTabRemoved(tabId, removeInfo) {
     if (enabledMap[tabId] !== undefined && enabledMap[tabId] === true) {
         enabledMap[tabId] = false;
-        currentUser = undefined;
+        //currentUser = undefined;
     }
 }
 
