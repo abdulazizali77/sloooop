@@ -10,7 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "babelify": "^10.0.0",
-    "browser-polyfill": "^3.20.2",
     "browserify": "^16.5.2",
     "jquery": "^3.5.1",
     "jqueryui": "^1.11.1",
