@@ -4,7 +4,6 @@
 //import $ from 'jquery';
 //import * as jqueryui from 'jqueryui';
 import getLoginUrl from "../shared/spotifyAuth";
-//import browserpolyfill from 'browser-polyfill';
 import querystring from 'querystring';
 import checkUserAccount from "../shared/spotifyMe";
 

@@ -238,16 +238,14 @@ function trackMutationCallback(mutationList, observer) {
     // mutatation.target.wholeText
     // mutatation.target.textContent
     //currentTrackId = undefined;
-    mutationList.forEach((mutation) => {
-        console.log("TRACK CHANGE TRIGGER mutationCallback " + mutation.type + " " + mutation.target + " " + mutation.target.textContent + " " + mutation.target.nodeValue);
-        //make api call
-        //TODO: check validity of token
-        //FIXME: could this actually be called multiple times?
-        spotifyInitTrack(bearertoken).then((res) => {
-            console.log(res)
-        }).catch((e) => {
-            console.log(e)
-        });
+
+    let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    let trackName = nowt1.innerText;
+    console.log("DEBUG TRACK CHANGE trackMutationCallback " + trackName);
+    spotifyInitTrack(bearertoken).then((res) => {
+        console.log(res)
+    }).catch((e) => {
+        console.log(e)
     });
 }
 
@@ -352,10 +350,24 @@ function observePlaybackPosition() {
     }
 }
 
+function observeTracksParent() {
+    let trackInfoParent = document.querySelectorAll('div[role="contentinfo"]')[0];
+    if (trackInfoParent != undefined) {
+        trackChangeObserver = new MutationObserver(trackMutationCallback);
+        trackChangeObserver.observe(trackInfoParent, moinit2);
+    } else {
+        console.log("ASSERT nowt undefined ");
+        setTimeout(observeTracksParent, 1000);
+    }
+}
+
 function observeTracks() {
+
+
     //a[data-testid="nowplaying-track-link"]
     //FIXME: unsure what the second one is
     let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    console.log("POOP observeTracks");
     if (nowt1 != undefined) {
         trackChangeObserver = new MutationObserver(trackMutationCallback);
         trackChangeObserver.observe(nowt1, moinit);
@@ -367,7 +379,9 @@ function observeTracks() {
 
 function setupObservers() {
     observePlaybackPosition();
-    observeTracks();
+    observeTracksParent();
+    //observeTracks();
+
     observeLogout();
     observePlayStart();
 }
@@ -471,6 +485,103 @@ function checkPlayingPosition() {
 
 }
 
+function handleEpisode(resp, resolve, reject) {
+    let nowTrack = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    if (nowTrack !== undefined) {
+        //FIXME: the correct and only way to do this
+        //is ot fetch the url and extract the id from the current url
+        let trackid = nowTrack.innerText;
+        let trackname = trackid;
+        let trackprogress = resp.progress_ms;
+        //fetch the duration from the player
+        let pbpos = document.getElementsByClassName("playback-bar__progress-time")[1];
+
+        if (pbpos !== undefined) {
+            let trackduration_s = timeToSeconds(pbpos.innerText);
+
+            //FIXME: duplicated code
+            currentTrackId = trackid;
+            currentTrackName = trackname;
+            currentTrackIdDuration = trackduration_s;
+            let status;
+            getTrack(trackid).then((result) => {
+                let detail = {
+                    duration: trackduration_s,
+                    min: 0,
+                    max: trackduration_s
+                };
+
+                if (result !== undefined) {
+                    console.log(result.min + " " + result.max);
+                    //emit event
+                    if (result.min !== undefined) {
+                        detail.min = result.min;
+                    }
+                    if (result.max !== undefined) {
+                        detail.max = result.max;
+                    }
+                }
+
+                let event = new CustomEvent("sloop_slider_init", {detail: detail});
+                window.dispatchEvent(event);
+                status = result.status;
+            }).catch((error) => {
+                //FIXME: necessary?
+                saveTrack(trackid, 0, trackduration_s);
+            }).finally(() => {
+                resolve({trackId: currentTrackId, trackName: currentTrackName, status: status});
+            });
+        } else {
+            reject();
+        }
+
+    } else {
+        reject();
+    }
+
+}
+
+function handleTrack(resp, resolve) {
+    let trackid = resp.item.id;
+    let trackname = resp.item.name;
+    let trackduration = resp.item.duration_ms;
+    let trackduration_s = Math.ceil(Number.parseInt(resp.item.duration_ms) / 1000);
+    let trackprogress = resp.progress_ms;
+    console.log("DEBUG  API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
+
+    currentTrackId = trackid;
+    currentTrackName = trackname;
+    currentTrackIdDuration = trackduration_s;
+    let status;
+    getTrack(trackid).then((result) => {
+        let detail = {
+            duration: trackduration_s,
+            min: 0,
+            max: trackduration_s
+        };
+
+        if (result !== undefined) {
+            console.log(result.min + " " + result.max);
+            //emit event
+            if (result.min !== undefined) {
+                detail.min = result.min;
+            }
+            if (result.max !== undefined) {
+                detail.max = result.max;
+            }
+        }
+
+        let event = new CustomEvent("sloop_slider_init", {detail: detail});
+        window.dispatchEvent(event);
+        status = result.status;
+    }).catch((error) => {
+        //FIXME: necessary?
+        saveTrack(trackid, 0, trackduration_s);
+    }).finally(() => {
+        resolve({trackId: currentTrackId, trackName: currentTrackName, status: status});
+    });
+
+}
 
 function spotifyInitTrack(token) {
     return new Promise((resolve, reject) => {
@@ -487,72 +598,44 @@ function spotifyInitTrack(token) {
         fetch(uri, fetchOptions).then((result) => {
 
             console.log(result.status);
-            if (result.status == 200) {
-                result.json().then(resp => {
-                    if (resp.item.id != undefined) {
-                        let trackid = resp.item.id;
-                        let trackname = resp.item.name;
-                        let trackduration = resp.item.duration_ms;
-                        let trackduration_s = Math.ceil(Number.parseInt(resp.item.duration_ms) / 1000);
-                        let trackprogress = resp.progress_ms;
-                        console.log("DEBUG  API CALLED " + trackid + " " + trackname + " " + trackduration + " " + trackprogress);
+            switch (result.status) {
+                case 200:
+                    result.json().then(resp => {
+                        switch (resp.currently_playing_type) {
+                            case 'track':
+                                handleTrack(resp, resolve);
+                                break;
+                            case 'episode':
+                                handleEpisode(resp, resolve);
+                                //NB: #46
+                                //get the current tab url
+                                console.log("POOP episode");
 
-                        currentTrackId = trackid;
-                        currentTrackName = trackname;
-                        currentTrackIdDuration = trackduration_s;
-                        getTrack(trackid).then((result) => {
-                            let detail = {
-                                duration: trackduration_s,
-                                min: 0,
-                                max: trackduration_s
-                            };
-
-                            if (result != undefined) {
-                                console.log(result.min + " " + result.max);
-                                //emit event
-                                if (result.min != undefined) {
-                                    detail.min = result.min;
-                                }
-                                if (result.max != undefined) {
-                                    detail.max = result.max;
-                                }
-                            }
-
-                            var event = new CustomEvent("sloop_slider_init", {detail: detail});
-                            window.dispatchEvent(event);
-
-                        }).catch((error) => {
-                            //FIXME: necessary?
-                            saveTrack(trackid, 0, trackduration_s);
-                        }).finally(() => {
-                            resolve({trackId: currentTrackId, trackName: currentTrackName, status: result.status});
-                        });
-                    } else {
-                        //FIXME: what are the reasons that item.id would be undefined ?
-                        reject("item id undefined");
-                    }
-                });
+                                reject();
+                                break;
+                            default:
+                                alert("ASSERT! ");
+                                reject();
+                                break;
+                        }
+                    });
+                    break;
+                case 403:
+                    console.log(" user is not premium" + result.status);
+                    //FIXME: move this out
+                    isNotPremium = true;
+                    reject(result.status);
+                    //fetch value from playbar
+                    break;
+                case 204:
+                default:
+                    console.log(" " + result.status);
+                    //fetch value from playbar
+                    //this would mean there was no playback
+                    reject(result.status);
+                    break;
             }
-            if (result.status === 204) {
-                console.log(" " + result.status);
-                //fetch value from playbar
-                //this would mean there was no playback
-                reject(result.status);
-            }
-            // {
-            //     "error" : {
-            //     "status" : 403,
-            //         "message" : "Player command failed: Premium required",
-            //         "reason" : "PREMIUM_REQUIRED"
-            // }
-            // }
-            if (result.status === 403) {
-                console.log(" user is not premium" + result.status);
-                //FIXME: move this out
-                isNotPremium = true;
-                reject(result.status);
-                //fetch value from playbar
-            }
+
         });
     });
 }
@@ -744,16 +827,16 @@ function onMessageHandler(msg, sender, sendResponse) {
     }
 
     if (msg.text === 'is_user_logged_in') {
-        checkUserLoggedIn().then((result)=>{
+        checkUserLoggedIn().then((result) => {
             sendResponse(result);
-        }).catch((e)=>{
+        }).catch((e) => {
             sendResponse(false);
         });
 
     }
 
     if (msg.text === 'disable_extension') {
-        if (enabled == true) {
+        if (enabled === true) {
             teardownOverlay(sendResponse);
             teardownObservers();
             enabled = false;
