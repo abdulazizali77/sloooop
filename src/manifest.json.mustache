@@ -1,44 +1,47 @@
 {
-  "name": "Spotify Looper",
-  "short_name": "Sloop",
-  "version": "{{ version }}",
-   "manifest_version": 2,
+    "name": "Spotify Looper",
+    "short_name": "Sloop",
+    "version": "{{ version }}",
+    "manifest_version": 2,
 
-   "permissions": [
+    "permissions": [
     "<all_urls>",
     "storage",
     "tabs",
     "activeTab",
     "declarativeContent"
 
-  ],
+    ],
 
-  "background": {
+    "background": {
     {{#browserIsChrome}}
-    "persistent": true,
+        "persistent": true,
     {{/browserIsChrome}}
-    "scripts": [
-      "background.bundle.js"
-    ]
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://open.spotify.com/*"
-      ],
-      "js": [
-        "contentscript.bundle.js"
-      ]
-    }
-  ],
-  "page_action": {
-    "default_icon": "images/32_0_unavailable.png"
-  },
+        "scripts": [
+            "background.bundle.js"
+        ]
+    },
 
-  "web_accessible_resources": [
-    "/html/*",
-    "/css/*",
-    "/images/*"
-  ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://open.spotify.com/*"
+            ],
+            "js": [
+                "contentscript.bundle.js"
+            ]
+        }
+    ],
+
+    "page_action": {
+        "default_icon": "images/32_0_unavailable.png"
+    },
+
+    "web_accessible_resources": [
+        "/html/*",
+        "/css/*",
+        "/images/*"
+    ],
+
     "content_security_policy": "script-src 'self' 'unsafe-eval' https://www.google-analytics.com; object-src 'self'; font-src 'self' data:;"
 }

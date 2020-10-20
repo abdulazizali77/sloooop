@@ -15,9 +15,10 @@ var currentTrackId;
 var currentTrackName;
 var rangeMin = 0;
 var rangeMax = 1;
+var sliderDisabled = false;
 var currentPlayingPosition;
 var currentTrackIdDuration;
-var playbackController;
+
 var isNotPremium;
 
 var trackChangeObserver;
@@ -130,9 +131,11 @@ function setupRangeSlider() {
         //FIXME: unsure best way to do this
         $(".ui-slider-handle").css('width', '2.2em');
         $(".ui-slider-handle").css('font-size', 'smallest');
+
     } catch (e) {
         console.log(e);
     }
+    //.ui-widget.ui-widget-content
 }
 
 function setupOverlay() {
@@ -243,9 +246,10 @@ function trackMutationCallback(mutationList, observer) {
     let trackName = nowt1.innerText;
     console.log("DEBUG TRACK CHANGE trackMutationCallback " + trackName);
     spotifyInitTrack(bearertoken).then((res) => {
-        console.log(res)
+        console.log(res);
+
     }).catch((e) => {
-        console.log(e)
+        console.log(e);
     });
 }
 
@@ -602,6 +606,14 @@ function spotifyInitTrack(token) {
             switch (result.status) {
                 case 200:
                     result.json().then(resp => {
+                        //FIXME: theres still the possibility of reject in the switch
+
+                        if(sliderDisabled === true){
+                            $(".ui-slider-handle").css('background', '#f6f6f6');
+                            $(".ui-widget-content").css('background', '#f6f6f6');
+                            $(".ui-widget-header").css('background', '#f6a828');
+                            sliderDisabled = false;
+                        }
                         switch (resp.currently_playing_type) {
                             case 'track':
                                 handleTrack(resp, resolve);
@@ -629,6 +641,14 @@ function spotifyInitTrack(token) {
                     //fetch value from playbar
                     break;
                 case 204:
+                    //there was nothing playing in the player
+                    sliderDisabled = true;
+
+                    //FIXME: unsure where to best put this
+                    $(".ui-slider-handle").css('background', '#aaa');
+                    $(".ui-widget-content").css('background', '#aaa');
+                    $(".ui-widget-header").css('background', '#aaa');
+                    break;
                 default:
                     console.log(" " + result.status);
                     //fetch value from playbar
