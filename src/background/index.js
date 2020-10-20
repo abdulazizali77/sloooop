@@ -315,9 +315,10 @@ function enableExtensionFlow(bearerToken) {
     });
 }
 
-function handleUserLogout() {
+function handleUserLogout(tabId) {
     currentUser = undefined;
     bearerToken = undefined;
+    enabledMap[tabId] = false;
 }
 
 function onTabCreated(tab) {
@@ -359,14 +360,11 @@ function onTabUpdated(tabId, changeInfo, tab) {
                 console.log(result.accountName + " is logged in");
             }).catch(() => {
                 console.log("user logged out");
-                handleUserLogout();
+                handleUserLogout(tabId);
+                updateIcon(tab);
             });
-            updateIcon(tab);
         }
-
-
     }
-
 }
 
 function isUserLoggedIn(tabId) {
