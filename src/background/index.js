@@ -15,7 +15,6 @@ export default function init() {
     //alert("bg init");
 }
 var enabledMap = {};
-var tabUserMap = {};
 
 var bearerUserMap = {};
 var lastTabId = -1;
@@ -166,7 +165,7 @@ function pageActionClick(thistab) {
 
 function injectScriptPath(tabId, scriptFilePath, runAt) {
     //console.log("injectScriptPath " + tabId + "\n" + scriptFilePath);
-    if (runAt == undefined) {
+    if (runAt === undefined) {
         runAt = "document_start";
     }
     return new Promise((resolve, reject) => {

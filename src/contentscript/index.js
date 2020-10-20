@@ -2,7 +2,7 @@ import './jquery-global';
 import 'jqueryui';
 import querystring from "querystring";
 import playerSeek from '../shared/spotifyPlayer';
-
+import {AREA_NAME, getTrack, saveTrack} from '../shared/Storage'
 
 console.log("start content.js");
 const SPOTIFY_PLAYER_EP = 'https://api.spotify.com/v1/me/player';
@@ -421,6 +421,7 @@ function handleDurationChange(event) {
     if (event.detail.max != undefined) {
         options.values[1] = event.detail.max;
     }
+    //getting Uncaught TypeError: Cannot read property 'id' of undefined here but init works fine
     $("#" + dialogDiv.id).slider(options);
 
     console.log("DEBUG  SLIDER INIT END");
@@ -640,61 +641,6 @@ function spotifyInitTrack(token) {
     });
 }
 
-function saveTrack(trackId, min, max) {
-    let trackValues = {
-        min: min,
-        max: max
-    };
-    console.log("DEBUG  SAVE TRACK! " + trackId + " " + min + " " + max);
-    let item = {};
-    item[trackId] = trackValues;
-    chrome.storage.local.set(item, function () {
-        console.log('SAVE TRACK Value for ' + trackId + ' is set to ' + trackValues.min + " " + trackValues.max);
-    });
-
-}
-
-function getTrack(trackId) {
-    return new Promise((resolve, reject) => {
-        chrome.storage.local.get(trackId, function (trackValues) {
-            if (chrome.runtime.lastError == undefined) {
-                console.log("DEBUG  GOT VALUES " + trackId + " trackValues[trackId]=" + trackValues[trackId]);
-                resolve(trackValues[trackId]);
-            } else {
-                reject();
-            }
-        });
-    });
-}
-
-
-function getPlaybackBar() {
-    let pb = document.getElementsByClassName("playback-bar");
-    return pb[0];
-}
-
-function getPlaybackController() {
-    //let bar = getPlaybackBar();
-    let bars = document.getElementsByClassName("playback-bar");
-    for (let bar of bars) {
-        for (let i in bar) {
-            if (i.startsWith("__reactEventHandlers")) {
-                alert(i);
-                let handlers = bar[i].children;
-                for (let j of handlers) {
-                    alert(j);
-                    if (j.props != undefined && j.props.onStepBackward != undefined) {
-                        playbackController = j.props;
-                        alert(playbackController);
-
-                    }
-                }
-            }
-        }
-    }
-
-}
-
 function seek(ms) {
     console.log("seeking to " + ms + " bearertoken=" + bearertoken);
     if (isNotPremium == false &&
@@ -713,23 +659,6 @@ function seek(ms) {
     }
 }
 
-function moveBackwards() {
-    if (playbackController != undefined) {
-        playbackController.onStepBackward();
-    } else {
-        getPlaybackController();
-    }
-}
-
-function moveForward() {
-    if (playbackController != undefined) {
-        playbackController.onStepForward();
-    } else {
-        getPlaybackController();
-    }
-
-}
-
 if (chrome) {
     if (chrome.tabs) {
         console.log("chrome.tabs=" + chrome.tabs);
@@ -741,7 +670,9 @@ if (chrome) {
     if (chrome.pageAction) {
         console.log("chrome.pageAction=" + chrome.pageAction);
     }
-
+    if (chrome.storage) {
+        chrome.storage.onChanged.addListener(handleStorageChanged);
+    }
 }
 
 try {
@@ -756,6 +687,7 @@ try {
         if (browser.pageAction) {
             alert("browser.pageAction=" + browser.pageAction);
         }
+
     }
 
 } catch (e) {
@@ -766,6 +698,33 @@ window.addEventListener('resize', adjustContainer);
 window.addEventListener('sloop_position_change', handlePositionChange, false);
 window.addEventListener('sloop_range_change', handleRangeChange, false);
 window.addEventListener('sloop_slider_init', handleDurationChange, false);
+
+function handleStorageChanged(changes, areaName) {
+    //FIXME: should make areaname configurable
+    if (areaName === AREA_NAME) {
+        for (let key in changes) {
+            let storageChange = changes[key];
+            console.log('DEBUG Storage key "%s" in namespace "%s" changed. ' +
+                'Old value was "%s", new value is "%s".',
+                key,
+                areaName,
+                storageChange.oldValue,
+                storageChange.newValue);
+            //TODO: do checks first?
+
+
+            //FIXME: duplicated code
+            let detail = {
+                //duration: currentTrackIdDuration,
+                min: storageChange.newValue.min,
+                max: storageChange.newValue.max
+            };
+
+            let event = new CustomEvent("sloop_slider_init", {detail: detail});
+            window.dispatchEvent(event);
+        }
+    }
+}
 
 function checkUserLoggedIn() {
     return new Promise((resolve, reject) => {
