@@ -159,8 +159,9 @@ function teardownOverlay(sendResponse) {
 function adjustContainer() {
     try {
         let playbarRect = document.getElementsByClassName("playback-bar")[0].getClientRects()[0];
-        containerDiv.style.left = playbarRect.left + "px";
-        containerDiv.style.width = playbarRect.width + "px";
+        let progressRect = document.getElementsByClassName("progress-bar__bg")[0].getClientRects()[0];
+        containerDiv.style.left = progressRect.left + "px";
+        containerDiv.style.width = progressRect.width + "px";
         //FIXME: uses 'px'
         let h = Number.parseFloat(containerDiv.style.height.substring(0, containerDiv.style.height.length - 2));
         containerDiv.style.top = (playbarRect.top - h) + "px";
