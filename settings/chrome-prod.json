@@ -1,6 +1,6 @@
 {
   "buildType": "prod",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "browserIsChrome": true,
   "appType": "chrome-extension"
 }

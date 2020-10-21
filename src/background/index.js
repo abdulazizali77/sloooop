@@ -86,7 +86,7 @@ function updateIcon(thistab) {
     let u1 = new URL(thistab.url);
     if (u1.host === VALID_HOST) {
         if (enabledMap[thistab.id] === false || enabledMap[thistab.id] === undefined) {
-
+            //FIXME make const maps
             chrome.pageAction.setIcon({tabId: thistab.id, path: "images/32_1_inactive.png"}, (r) => {
                 console.log("setIcon " + r);
             });
