@@ -2,7 +2,10 @@ import './jquery-global';
 import 'jqueryui';
 import querystring from "querystring";
 import playerSeek from '../shared/spotifyPlayer';
-import {AREA_NAME, getTrack, saveTrack} from '../shared/Storage'
+import {AREA_NAME, getTrack, saveTrack} from '../shared/Storage';
+
+import {injectCssToHead} from "./headUtilities";
+import showDialog from "./showDialog";
 
 console.log("start content.js");
 const SPOTIFY_PLAYER_EP = 'https://api.spotify.com/v1/me/player';
@@ -28,52 +31,6 @@ var playBtnObserver;
 var theLogoutBtn;
 
 var prevClick;
-
-function injectCssToHead(cssFile) {
-    injectLinkToHead(cssFile, "text/css").rel = "stylesheet";
-}
-
-function injectLinkToHead(filePath, type) {
-    let link = document.createElement("LINK");
-
-    link.type = type;
-    if (chrome != undefined && chrome.runtime != undefined) {
-        link.href = chrome.runtime.getURL(filePath);
-    } else {
-        link.href = browser.runtime.getURL(filePath);
-    }
-    document.head.appendChild(link);
-    return link;
-}
-
-function setupWinJsDialog() {
-    //add link
-    //<link href="scripts/winjs/css/ui-light.css" rel="stylesheet"/>
-    injectCssToHead("css/ui-light.css");
-
-    let data_win_options = {
-        title: 'Main instruction',
-        primaryCommandText: 'button1',
-        secondaryCommandText: 'button2'
-
-    };
-    dialogDiv = document.createElement("DIV");
-    dialogDiv.setAttribute("data-win-control", "WinJS.UI.ContentDialog");
-    dialogDiv.setAttribute("data-win-options", JSON.stringify(data_win_options));
-    dialogDiv.innerText = "stuff";
-
-    //dialogDiv.style.cssText = "position: fixed; right: 150px; top:0px; z-index: 100; width: 150px; height: 100%;";
-    dialogDiv.id = "dialogDiv1";
-    document.body.appendChild(dialogDiv);
-
-    try {
-        //$("#" + dialogDiv.id + "").draggable();
-        //$("#" + dialogDiv.id + "").resizable();
-    } catch (e) {
-        alert("error " + e);
-        console.log("error " + e);
-    }
-}
 
 function rangeSliderStartHandler(event, ui) {
     console.log(event.target.id);
@@ -609,7 +566,7 @@ function spotifyInitTrack(token) {
                     result.json().then(resp => {
                         //FIXME: theres still the possibility of reject in the switch
 
-                        if(sliderDisabled === true){
+                        if (sliderDisabled === true) {
                             $(".ui-slider-handle").css('background', '#f6f6f6');
                             $(".ui-widget-content").css('background', '#f6f6f6');
                             $(".ui-widget-header").css('background', '#f6a828');
@@ -801,8 +758,11 @@ function onMessageHandler(msg, sender, sendResponse) {
     }
     if (msg.text === 'display_premium_warning') {
         isNotPremium = false;
-        //TODO: show winjs dialog #27
-        alert("Not Premium");
+
+        let dialog = showDialog('Not Premium', 'You need to be premium to use this extension',
+            {text: 'Ok', callback: dismissDialog},
+            {text: 'Upgrade', callback: forwardUpgrade});
+        dialog.winControl.show();
         sendResponse(true);
     }
 
@@ -832,6 +792,15 @@ function onMessageHandler(msg, sender, sendResponse) {
     }
 
     return true;
+}
+
+function forwardUpgrade() {
+    console.log("forwardUpgrade");
+    window.open("https://www.spotify.com/premium/");
+}
+
+function dismissDialog() {
+    console.log("dismissDialog");
 }
 
 console.log("end content.js");

@@ -15,6 +15,7 @@ extension: build/background.bundle.js
 extension: build/contentscript.bundle.js
 extension: css
 extension: images
+extension: fonts
 extension: build/manifest.json
 
 build:
@@ -45,6 +46,10 @@ images:
 	cp -r images build
 	mkdir build/css/images
 	cp node_modules/jqueryui/images/* build/css/images/.
+
+fonts:
+	@mkdir build/fonts
+	cp -r node_modules/winjs/fonts build
 
 #FIXME: doesnt work
 .PHONY: test
