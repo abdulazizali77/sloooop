@@ -10,7 +10,7 @@ import showDialog from "./showDialog";
 console.log("start content.js");
 const SPOTIFY_PLAYER_EP = 'https://api.spotify.com/v1/me/player';
 //TODO: should have a state machine
-var enabled;
+var enabled = false;
 var containerDiv;
 var dialogDiv;
 var bearertoken;
@@ -98,7 +98,12 @@ function setupRangeSlider() {
 function setupOverlay() {
     return new Promise((resolve, reject) => {
         //setupWinJsDialog();
-        setupRangeSlider();
+        //FIXME: BAD
+        if (enabled === false || enabled === undefined) {
+            setupRangeSlider();
+        } else {
+            console.log("DEBUG setupOverlay calling after overlay has been set up");
+        }
         resolve();
         //FIXME reject?
 
@@ -733,7 +738,10 @@ function onMessageHandler(msg, sender, sendResponse) {
             adjustContainer();
             //FIXME: check if setup first
             //the track mutation will call spotifyInitTrack inevitably
-            setupObservers();
+            //FIXME: BAD idiom
+            if (enabled === false || enabled === undefined) {
+                setupObservers();
+            }
 
             //getPlaybackController();
             spotifyInitTrack(bearertoken).then((res) => {
@@ -746,23 +754,19 @@ function onMessageHandler(msg, sender, sendResponse) {
             isNotPremium = false;
             sendResponse(true);
         });
-        //         } else {
-        //             isNotPremium = true;
-        //             alert("Not Premium");
-        //         }
-        //     });
-        // }).catch((e) => {
-        //
-        // });
-
     }
+
     if (msg.text === 'display_premium_warning') {
         isNotPremium = false;
 
-        let dialog = showDialog('Not Premium', 'You need to be premium to use this extension',
+        showDialog('Not Premium', 'You need to be premium to use this extension',
             {text: 'Ok', callback: dismissDialog},
-            {text: 'Upgrade', callback: forwardUpgrade});
-        dialog.winControl.show();
+            {text: 'Upgrade', callback: forwardUpgrade})
+            .then((dialog) => {
+                dialog.winControl.show();
+            }).catch((e) => {
+            console.log(e);
+        });
         sendResponse(true);
     }
 
@@ -791,7 +795,26 @@ function onMessageHandler(msg, sender, sendResponse) {
         sendResponse(true);
     }
 
+    if (msg.text === 'notify_bearer_expire') {
+        showDialog('Bearer Expired', 'You need to refetch the bearer ',
+            {text: 'Ok', callback: dismissDialog},
+            {text: 'Refresh', callback: refreshBearer})
+            .then((dialog) => {
+                dialog.winControl.show();
+            }).catch((e) => {
+                console.log(e);
+        });
+
+        sendResponse(true);
+    }
     return true;
+}
+
+function refreshBearer() {
+    console.log("refreshBearer");
+    chrome.runtime.sendMessage({type: "refresh_bearer"}, function (response) {
+        console.log("DEBUG refreshBearer=");
+    });
 }
 
 function forwardUpgrade() {

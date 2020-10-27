@@ -25,10 +25,11 @@ var bearerFetchTimeStamp;
 var bearerFetchTimeStampExpire;
 var bearerToken;
 var currentUser;
+var bearerTimeout;
 
 function hasToken() {
     let res = false;
-    if ((bearerToken != undefined && bearerToken != '')) {
+    if ((bearerToken !== undefined && bearerToken !== '')) {
 
         //check if date expired
         let diff = (bearerFetchTimeStampExpire - Date.now());
@@ -149,18 +150,22 @@ function pageActionClick(thistab) {
         }
 
     } else {
-        chrome.tabs.sendMessage(thistab.id,
-            {
-                "text": 'disable_extension'
-            },
-            (result2) => {
-                console.log("finished disabling message " + result2);
-                enabledMap[thistab.id] = false;
-                updateIcon(thistab);
-            });
+        disableExtensionWrapper(thistab);
     }
 
 
+}
+
+function disableExtensionWrapper(thistab) {
+    chrome.tabs.sendMessage(thistab.id,
+        {
+            "text": 'disable_extension'
+        },
+        (result2) => {
+            console.log("finished disabling message " + result2);
+            enabledMap[thistab.id] = false;
+            updateIcon(thistab);
+        });
 }
 
 function injectScriptPath(tabId, scriptFilePath, runAt) {
@@ -174,6 +179,18 @@ function injectScriptPath(tabId, scriptFilePath, runAt) {
             resolve(result);
         });
     });
+}
+
+function handleBearerTimeout() {
+    console.log("DEBUG bearer handleBearerTimeout");
+    chrome.tabs.sendMessage(lastTabId,
+        {
+            "text": 'notify_bearer_expire'
+        },
+        (result2) => {
+            console.log("finished set bearer" + result2);
+        });
+    //no tab id how
 }
 
 function handleAuthFlow(uri, tab) {
@@ -192,7 +209,10 @@ function handleAuthFlow(uri, tab) {
         expectingBearer = false;
         //NB: odnt actually need bearerFetchTimeStamp
         bearerFetchTimeStamp = Date.now();
-        bearerFetchTimeStampExpire = bearerFetchTimeStamp + (Number.parseFloat(obj1.expires_in) * 1000);
+        let expires_ms = (Number.parseFloat(obj1.expires_in) * 1000);
+        bearerFetchTimeStampExpire = bearerFetchTimeStamp + expires_ms;
+        console.log("DEBUG bearer timeout expires_ms=" + expires_ms);
+        bearerTimeout = setTimeout(handleBearerTimeout, expires_ms);
 
         //fetch the user and associate the bearer
         chrome.tabs.remove(tab.id, () => {
@@ -205,16 +225,18 @@ function handleAuthFlow(uri, tab) {
                         result.json().then(body => {
                             let userId = body.id;
                             bearerUserMap[obj1.access_token] = userId;
+
                             enableExtensionFlow(obj1.access_token)
                                 .then((r) => {
                                     console.log(r + " " + enabledMap[tab.id] + " tab.url=" + tab.url);
-                                    enabledMap[lastTabId] = true;//???
+
                                     //WTF
-                                    updateIcon({id: lastTabId, url: "https://"+VALID_HOST});
+                                    updateIcon({id: lastTabId, url: "https://" + VALID_HOST});
                                 })
                                 .catch((e) => {
                                     console.log(e);
                                 });
+
                         });
 
                     })
@@ -278,10 +300,10 @@ function enableExtensionFlow(bearerToken) {
                             chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
                                 console.log("DEBUG  focused lastTabId=" + lastTabId + " lastWindowId=" + lastWindowId + " " + lastTabIndex);
                                 //FIXME: callback hell
+                                //FIXME: on subsequent auth flows
                                 chrome.tabs.sendMessage(lastTabId,
                                     {
                                         "text": 'enable_extension'
-
                                     },
                                     (result2) => {
                                         console.log("finished enabling message " + result2);
@@ -292,6 +314,10 @@ function enableExtensionFlow(bearerToken) {
                             });
                         });
                 } else {
+                    //FIXME: bad
+                    clearTimeout(bearerTimeout);
+                    enabledMap[lastTabId] = false;
+
                     chrome.tabs.highlight({windowId: lastWindowId, tabs: lastTabIndex}, (window) => {
                         console.log("DEBUG not premium! focused lastTabId=" + lastTabId + " lastWindowId=" + lastWindowId + " " + lastTabIndex);
                         //FIXME: callback hell
@@ -316,9 +342,17 @@ function enableExtensionFlow(bearerToken) {
 }
 
 function handleUserLogout(tabId) {
+    if (bearerTimeout !== undefined) {
+        clearTimeout(bearerTimeout);
+    }
+
     currentUser = undefined;
     bearerToken = undefined;
     enabledMap[tabId] = false;
+}
+
+function handleRefreshBearer(tabId) {
+
 }
 
 function onTabCreated(tab) {
@@ -406,6 +440,16 @@ function backgroundMessageHandler(request, sender, sendResponse) {
             });
         enabledMap[sender.tab.id] = false;
         handleUserLogout();
+        sendResponse();
+    }
+
+    if (request.type == "refresh_bearer") {
+        console.log("DEBUG " + request.type + " " + request.tab + " " + sender.tab.id);
+        currentUser = undefined;
+        bearerToken = undefined;
+        enabledMap[sender.tab.id] = false;
+        //FIXME: change to logical naming
+        pageActionClick(sender.tab);
         sendResponse();
     }
 }
