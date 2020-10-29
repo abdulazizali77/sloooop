@@ -11,7 +11,7 @@ This AB looper extension only works for Spotify web player and the chrome browse
 - Is dependent on a specific Spotify app client id. You can modify this to your own client id if you want.
 
 ## Easy Installation
-Go to the [chrome-store]
+Go to the [chrome-store](https://chrome.google.com/webstore/detail/sloooop/ohncbpgmipkaabdgojlikdkinldepdkm)
 
 ## Manual Installation
 - clone the repository
