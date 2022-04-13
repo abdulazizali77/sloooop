@@ -207,7 +207,7 @@ function trackMutationCallback(mutationList, observer) {
     // mutatation.target.textContent
     //currentTrackId = undefined;
 
-    let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    let nowt1 = document.querySelectorAll('a[data-testid="context-item-link"]')[0];
     let trackName = nowt1.innerText;
     console.log("DEBUG TRACK CHANGE trackMutationCallback " + trackName);
     spotifyInitTrack(bearertoken).then((res) => {
@@ -280,12 +280,13 @@ function logoutClickedCallback(mutationList, observer) {
 }
 
 function observePlayStart() {
-    let obs = document.querySelectorAll("button[data-testid='control-button-play']")[0];
+    let obs = document.querySelectorAll("button[data-testid='control-button-playpause']")[0];
     //if undefined, it could mean that it is already playing
     //how to do compound or fallback css selector?
-    if (obs == undefined) {
-        obs = document.querySelectorAll("button[data-testid='control-button-pause']")[0];
-    }
+
+    // if (obs == undefined) {
+    //     obs = document.querySelectorAll("button[data-testid='control-button-pause']")[0];
+    // }
     //if its still undefined, we try this again
     if (obs != undefined) {
         playBtnObserver = new MutationObserver(playButtonMutationCallback);
@@ -309,7 +310,8 @@ function observeLogout() {
 
 function observePlaybackPosition() {
     //current time
-    let pbpos = document.getElementsByClassName("playback-bar__progress-time")[0];
+    let pbpos = document.getElementsByClassName("playback-bar__progress-time-elapsed")[0];
+
     if (pbpos != undefined) {
         playbackPositionObserver = new MutationObserver(positionMutationCallback);
         playbackPositionObserver.observe(pbpos, moinit);
@@ -335,7 +337,7 @@ function observeTracks() {
 
     //a[data-testid="nowplaying-track-link"]
     //FIXME: unsure what the second one is
-    let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    let nowt1 = document.querySelectorAll('a[data-testid="context-item-link"]')[0];
     console.log("POOP observeTracks");
     if (nowt1 != undefined) {
         trackChangeObserver = new MutationObserver(trackMutationCallback);
@@ -421,7 +423,7 @@ function handleRangeChange(event) {
 function checkPlayingPosition() {
 
 
-    let nowt1 = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    let nowt1 = document.querySelectorAll('a[data-testid="context-item-link"]')[0];
     let tempTrackName;
     if (nowt1 != undefined) {
         tempTrackName = nowt1.innerText;
@@ -456,7 +458,8 @@ function checkPlayingPosition() {
 }
 
 function handleEpisode(resp, resolve, reject) {
-    let nowTrack = document.querySelectorAll('a[data-testid="nowplaying-track-link"]')[0];
+    //FIXME: probably make into a global constant
+    let nowTrack = document.querySelectorAll('a[data-testid="context-item-link"]')[0];
     if (nowTrack !== undefined) {
         //FIXME: the correct and only way to do this
         //is ot fetch the url and extract the id from the current url
@@ -464,7 +467,7 @@ function handleEpisode(resp, resolve, reject) {
         let trackname = trackid;
         let trackprogress = resp.progress_ms;
         //fetch the duration from the player
-        let pbpos = document.getElementsByClassName("playback-bar__progress-time")[1];
+        let pbpos = document.getElementsByClassName("playback-bar__progress-time-elapsed")[0];
 
         if (pbpos !== undefined) {
             let trackduration_s = timeToSeconds(pbpos.innerText);
