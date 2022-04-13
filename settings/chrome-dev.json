@@ -1,6 +1,6 @@
 {
   "buildType": "dev",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "browserIsChrome": true,
   "appType": "chrome-extension"
 }
