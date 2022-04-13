@@ -121,14 +121,16 @@ function teardownOverlay(sendResponse) {
 function adjustContainer() {
     try {
         let playbarRect = document.getElementsByClassName("playback-bar")[0].getClientRects()[0];
-        let progressRect = document.getElementsByClassName("progress-bar__bg")[0].getClientRects()[0];
+        //FIXME: probably need to encapsulate these frail strongly coupled queries in catch blocks and display sensible errors
+        //spotify changed this circa march 2022
+        let progressRect = document.querySelectorAll('div[data-testid="progress-bar-background"]')[0].getClientRects()[0];
         containerDiv.style.left = progressRect.left + "px";
         containerDiv.style.width = progressRect.width + "px";
         //FIXME: uses 'px'
         let h = Number.parseFloat(containerDiv.style.height.substring(0, containerDiv.style.height.length - 2));
         containerDiv.style.top = (playbarRect.top - h) + "px";
     } catch (e) {
-
+        //FIXME: display sad cat
     }
 }
 
